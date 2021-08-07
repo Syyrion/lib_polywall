@@ -1,0 +1,16 @@
+{
+    "disambiguator": "library_polywall",
+    "name": "polywall",
+    "author": "syyrion",
+    "version": 1.11,
+    "priority": 3.02,
+    "dependencies":
+	[
+		{
+			"disambiguator": "ohvrvanilla",
+			"name": "base",
+			"author": "vittorio romeo",
+			"min_version": 1
+		}
+    ]
+}

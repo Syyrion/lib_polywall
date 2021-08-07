@@ -1,0 +1,15 @@
+[] - index for layers
+() - call for keys
+
+
+
+Layer indexing - indexing while filtering with layers:
+Basewall[nil] -> self.layer -> functions that work on all layers
+Basewall[l] -> self.layer[l] -> functions that work on single layers
+Basewall[l](nil) -> self.layer[l].set -> functions that work on all walls within a layer
+Basewall[l](key) -> self.layer[l].set[key] - functions that work on a single wall
+
+
+Key indexing - bypass layer filtering by directly indexing walls
+Basewall(nil) -> self.layerMap -> functions that work on all walls on all layers(?)
+Basewall(key) -> self.layer[self.layerMap[key]].set[key] -> functions that work on a single wall
