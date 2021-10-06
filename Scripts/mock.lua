@@ -1,5 +1,5 @@
 u_execDependencyScript("ohvrvanilla", "base", "vittorio romeo", "utils.lua")
-print("!! WARNING !! mock.lua is deprecated and will be removed on Dec. 1 2021.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
+print("!! WARNING !! mock.lua is deprecated and will be removed on Jan. 1 2023.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
 
 --[[ Mock Class ]]--
 -- An abstract class of which MockPolygon and MockPlayer inherit from
@@ -193,7 +193,7 @@ end
 -- Sets the distance the player is from the center
 function MockPlayer:setDistance(d) self.distance = d or 80 end
 
--- Returns the distance the player is from the conter
+-- Returns the distance the player is from the center
 function MockPlayer:getDistance() return self.distance end
 
 -- Sets the height of the player (the height of the triangle)
@@ -229,10 +229,10 @@ end
 -- Th distance offset is helpful for animating the beatpulse offset
 -- The third parameter of a transformation function is the vertex index which is detailed below
 --                V0.
---                  /\
---                /'  '\
---   CCW <<     /' PLYR '\     >> CW
---         V1./'__________'\.V2
+--                  ..
+--                .'  '.
+--   CCW <<     .' PLYR '.     >> CW
+--         V1..'__________'..V2
 function MockPlayer:update(mFocus, angleOverride, distanceOffset, ...)
 	local d, h, w, a = self.distance + (distanceOffset or 0), self.height, self.width * (mFocus and 0.6 or 1), angleOverride or self.angle
 	local db = d - h

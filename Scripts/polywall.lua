@@ -1,5 +1,5 @@
 u_execScript('basewall.lua')
-print("!! WARNING !! polwall.lua is deprecated and will be removed on Dec. 1 2021.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
+print("!! WARNING !! polwall.lua is deprecated and will be removed on Jan. 1 2023.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
 
 --[[ PolyWall class ]]--
 -- Inherits from BaseWall
@@ -20,13 +20,14 @@ function BaseWall:new()
 	setmetatable(newInst, self)
 
 	newInst.layer, newInst.layerMap, newInst.type = {}, {}, 'polywall'
-	
+
 	return newInst
 end
 
 -- Creates a new PolyWall class with defined layers
 function PolyWall:newCLSet(sh, th, sp, lim0, lim1, R, G, B, A, tp, tc, p, ...)
 	local newInst = self:newCL(...)
+---@diagnostic disable-next-line: redundant-parameter
 	newInst:setLayerAll(sh, th, sp, lim0, lim1, R, G, B, A, tp, tc, p)
 	return newInst
 end
