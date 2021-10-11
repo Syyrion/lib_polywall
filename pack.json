@@ -11,6 +11,12 @@
 			"name": "base",
 			"author": "vittorio romeo",
 			"min_version": 1
+		},
+        {
+			"disambiguator": "library_extbase",
+			"name": "extbase",
+			"author": "syyrion",
+			"min_version": 0
 		}
     ]
 }

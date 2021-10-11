@@ -1,5 +1,5 @@
 u_execDependencyScript("ohvrvanilla", "base", "vittorio romeo", "utils.lua")
-print("!! WARNING !! basewall.lua is deprecated and will be removed on Dec. 1 2021.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
+print("!! WARNING !! basewall.lua is deprecated and will be removed on Jan. 1 2023.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
 
 --[[ BaseWall Class ]]--
 -- Table to facilitate the BaseWall class

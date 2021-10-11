@@ -1,5 +1,5 @@
 u_execScript('basewall.lua')
-print("!! WARNING !! arcwall.lua is deprecated and will be removed on Dec. 1 2021.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
+print("!! WARNING !! arcwall.lua is deprecated and will be removed on Jan. 1 2023.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
 
 --[[ ArcWall Class ]]--
 -- Inherits from Basewall
