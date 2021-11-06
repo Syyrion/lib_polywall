@@ -18,16 +18,27 @@ local __E = setmetatable({
 	wc = 'WallCreationError',
 	df = 'SetDefaultError',
 
-	dne = 'Layer <%d> does not exist',
-	ovr = 'Cannot overwrite already existing layer <%d>',
-	sum = 'Sum of all values in ratio must be greater than 0',
-	inv = 'Argument #%d is invalid',
-	ret = 'Number of return values is incorrect. Should return %d values, got %d',
-	arg = 'Argument #%d is not a %s',
+	dne = 'Layer <%d> does not exist. ',
+	tmq = 'Did you forget to run the template function first? ',
+	ovr = 'Cannot overwrite already existing layer <%d>. ',
+	sum = 'Sum of all values in ratio must be greater than 0. ',
+	inv = 'Argument #%d is invalid. ',
+	ret = 'Number of return values is incorrect. Should return %d values, got %d. ',
+	arg = 'Argument #%d is not a %s. ',
 	cus = '%s'
 }, {
-	__call = function (this, err, msg, ...)
-		return string.format('[%s] %s.', this[err], string.format(this[msg], ...))
+	__call = function (this, err, ...)
+		local t, msg = {...}, string.format('[%s] ', this[err])
+		for i = 1, #t do
+			msg = msg .. this[t[i]]
+		end
+		return setmetatable({
+			msg = msg
+		}, {
+			__call = function (this, ...)
+				return string.format(this.msg, ...)
+			end
+		})
 	end
 })
 
@@ -40,8 +51,8 @@ local __D = setmetatable({
 		if type(fn) ~= "function" then self.fn = nil return end
 		local t = {fn()}
 		local l = #t
-		assert(l == 1, __E('df', 'ret', 1, l))
-		assert(verify(t[1]), __E('df', 'cus', 'Verification failed. Default function did not return proper values.'))
+		assert(l == 1, __E('df', 'ret')(1, l))
+		assert(verify(t[1]), __E('df', 'cus')('Verification failed. Define function did not return proper values.'))
 		self.fn = fn
 	end
 }, {
@@ -88,7 +99,7 @@ end
 -- Sets a value to its default
 function Discrete:freeze() self.val = self:defget() end
 -- Defines a value's default function
-function Discrete:def(fn) getmetatable(self):set(fn, self.verify) end
+function Discrete:define(fn) getmetatable(self):set(fn, self.verify) end
 
 --[[
 	* Discrete Numeric class
@@ -188,7 +199,7 @@ function Channel:get() return self.r:get(), self.g:get(), self.b:get(), self.a:g
 function Channel:rawget() return self.r:rawget(), self.g:rawget(), self.b:rawget(), self.a:rawget() end
 function Channel:defget() return self.r:defget(), self.g:defget(), self.b:defget(), self.a:defget() end
 function Channel:freeze() self.r:freeze() self.g:freeze() self.b:freeze() self.a:freeze() end
-function Channel:def(rfn, gfn, bfn, afn) self.r:def(rfn) self.g:def(gfn) self.b:def(bfn) self.a:def(afn) end
+function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn) self.b:define(bfn) self.a:define(afn) end
 
 
 
@@ -265,7 +276,7 @@ function QuadVertex:chdefget()
 	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3].ch:defget()
 end
 function QuadVertex:chfreeze() for i = 0, 3 do self[i].ch:freeze() end end
-function QuadVertex:chdef(rfn, gfn, bfn, afn) for i = 0, 3 do self[i].ch:def(rfn, gfn, bfn, afn) end end
+function QuadVertex:chdefine(rfn, gfn, bfn, afn) for i = 0, 3 do self[i].ch:define(rfn, gfn, bfn, afn) end end
 
 function QuadVertex:chgetres(...)
 	local r0, g0, b0, a0 = self[0]:getres(...)
@@ -279,21 +290,21 @@ function QuadVertex:polget() return self[0].pol:get(), self[1].pol:get(), self[2
 function QuadVertex:polrawget() return self[0].pol:rawget(), self[1].pol:rawget(), self[2].pol:rawget(), self[3].pol:rawget() end
 function QuadVertex:poldefget() return self[0].pol:defget(), self[1].pol:defget(), self[2].pol:defget(), self[3].pol:defget() end
 function QuadVertex:polfreeze() for i = 0, 3 do self[i].pol:freeze() end end
-function QuadVertex:poldef(fn) for i = 0, 3 do self[i].pol:def(fn) end end
+function QuadVertex:poldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 
 function QuadVertex:cartset(cart) for i = 0, 3 do self[i].cart:set(cart) end end
 function QuadVertex:cartget() return self[0].cart:get(), self[1].cart:get(), self[2].cart:get(), self[3].cart:get() end
 function QuadVertex:cartrawget() return self[0].cart:rawget(), self[1].cart:rawget(), self[2].cart:rawget(), self[3].cart:rawget() end
 function QuadVertex:cartdefget() return self[0].cart:defget(), self[1].cart:defget(), self[2].cart:defget(), self[3].cart:defget() end
 function QuadVertex:cartfreeze() for i = 0, 3 do self[i].pol:freeze() end end
-function QuadVertex:cartdef(fn) for i = 0, 3 do self[i].pol:def(fn) end end
+function QuadVertex:cartdefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 
 function QuadVertex:colset(col) for i = 0, 3 do self[i].col:set(col) end end
 function QuadVertex:colget() return self[0].col:get(), self[1].col:get(), self[2].col:get(), self[3].col:get() end
 function QuadVertex:colrawget() return self[0].col:rawget(), self[1].col:rawget(), self[2].col:rawget(), self[3].col:rawget() end
 function QuadVertex:coldefget() return self[0].col:defget(), self[1].col:defget(), self[2].col:defget(), self[3].col:defget() end
 function QuadVertex:colfreeze() for i = 0, 3 do self[i].pol:freeze() end end
-function QuadVertex:coldef(fn) for i = 0, 3 do self[i].pol:def(fn) end end
+function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 
 
 
@@ -325,7 +336,7 @@ function DualAngle:get() return self.origin:get(), self.extent:get(), self.offse
 function DualAngle:rawget() return self.origin:rawget(), self.extent:rawget(), self.offset:rawget() end
 function DualAngle:defget() return self.origin:defget(), self.extent:defget(), self.offset:defget() end
 function DualAngle:freeze() self.origin:freeze() self.extent:freeze() self.offset:freeze() end
-function DualAngle:def(a0fn, a1fn, ofsfn) self.origin:def(a0fn) self.extent:def(a1fn) self.offset:def(ofsfn) end
+function DualAngle:define(a0fn, a1fn, ofsfn) self.origin:define(a0fn) self.extent:define(a1fn) self.offset:define(ofsfn) end
 function DualAngle:getres()
 	local ofs = self.offset:get()
 	return self.origin:get() + ofs, self.extent:get() + ofs
@@ -367,7 +378,7 @@ function DualLimit:get() return self.origin:get(), self.extent:get() end
 function DualLimit:rawget() return self.origin:rawget(), self.extent:rawget() end
 function DualLimit:defget() return self.origin:defget(), self.extent:defget() end
 function DualLimit:freeze() self.origin:freeze() self.extent:freeze() end
-function DualLimit:def(lim0fn, lim1fn) self.origin:def(lim0fn) self.extent:def(lim1fn) end
+function DualLimit:define(lim0fn, lim1fn) self.origin:define(lim0fn) self.extent:define(lim1fn) end
 function DualLimit:swap()
 	local o, e = self:get()
 	self:set(e, o)
@@ -395,7 +406,7 @@ Speed.__index = Speed
 
 local MockPlayerAngle = setmetatable({}, __D(DiscreteNumeric, u_getPlayerAngle))
 MockPlayerAngle.__index = MockPlayerAngle
-local MockPlayerRadius = setmetatable({}, __D(DiscreteNumeric, getPlayerTipRadius))
+local MockPlayerRadius = setmetatable({}, __D(DiscreteNumeric, getDistanceBetweenCenterAndPlayerTip))
 MockPlayerRadius.__index = MockPlayerRadius
 local MockPlayerHeight = setmetatable({}, __D(DiscreteNumeric, getPlayerHeight))
 MockPlayerHeight.__index = MockPlayerHeight
@@ -414,13 +425,13 @@ __MASTER.__index = __MASTER
 function __MASTER:rw(key)
 	cw_setVertexPos4(key, 0, 0, 0, 0, 0, 0, 0, 0)
 	cw_destroy(key)
-	self.array[key] = nil
+	self.W[key] = nil
 	collectgarbage()
 end
 function __MASTER:fullrw(depth)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
-		for k, _ in pairs(self.array) do
+		for k, _ in pairs(self.W) do
 			self:rw(k)
 		end
 	else
@@ -433,7 +444,7 @@ end
 function __MASTER:tint(depth, r, g, b, a)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
-		for _, v in pairs(self.array) do
+		for _, v in pairs(self.W) do
 			v.vertex:chset(r, g, b, a)
 		end
 	else
@@ -481,7 +492,7 @@ local MockPlayer = setmetatable({
 	width = MockPlayerWidth,
 	accurate = DiscreteBoolean,
 	layer = setmetatable({}, __WEAKVALUES),
-	array = {}
+	W = {}
 }, __MASTER)
 MockPlayer.__index = MockPlayer
 
@@ -495,7 +506,7 @@ function MockPlayer:new(parent)
 		vertex = parent.vertex:new(),
 		accurate = self.accurate:new(),
 		layer = setmetatable({}, __WEAKVALUES),
-		array = {}
+		W = {}
 	}, self)
 	newInst.__index = newInst
 	return newInst
@@ -507,7 +518,7 @@ function MockPlayer:create(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		local key = cw_createNoCollision()
-		self.array[key] = self:new(...)
+		self.W[key] = self:new(...)
 		return key
 	else
 		for _, v in pairs(self.layer) do
@@ -520,7 +531,7 @@ function MockPlayer:advance() end
 function MockPlayer:step(depth, mFocus, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
-		for k, v in pairs(self.array) do
+		for k, v in pairs(self.W) do
 			local angle, radius, halfWidth = v.angle:get(), v.radius:get(), v.width:get() * 0.5 * (mFocus and FOCUSRATIO or 1)
 			local baseRadius, accurate = radius - v.height:get(), v.accurate:get()
 			local sideRadius = accurate and (halfWidth * halfWidth + baseRadius * baseRadius) ^ 0.5 or baseRadius
@@ -545,7 +556,7 @@ end
 function MockPlayer:fill(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
-		for k, v in pairs(self.array) do
+		for k, v in pairs(self.W) do
 			cw_setVertexColor4(k, unpack({v.vertex:chgetres(...)}))
 		end
 	else
@@ -565,7 +576,7 @@ PolyWall = setmetatable({
 	speed = Speed,
 	vertex = QuadVertex,
 	layer = setmetatable({}, __WEAKVALUES),
-	array = {},
+	W = {},
 	player = MockPlayer
 }, __MASTER)
 PolyWall.__index = PolyWall
@@ -579,7 +590,7 @@ function PolyWall:new(a0, a1, ofs, lim0, lim1, th, sp, p, r, g, b, a, pol, cart,
 		position = type(p) == 'number' and p or nil,
 		vertex = self.vertex:new(r, g, b, a, pol, cart, col),
 		layer = setmetatable({}, __WEAKVALUES),
-		array = {}
+		W = {}
 	}, {
 		__index = function (this, key)
 			return type(key) ~= 'number' and (function ()
@@ -594,14 +605,13 @@ function PolyWall:new(a0, a1, ofs, lim0, lim1, th, sp, p, r, g, b, a, pol, cart,
 	return newInst
 end
 function PolyWall:posset(p) self.position = type(p) == 'number' and p or nil end
-function PolyWall:posget() return self.position or (self.speed:get() >= 0 and self.limit.origin:get() or self.limit.extent:get()) end
-function PolyWall:posrawget() return rawget(self, 'position') end
+function PolyWall:posget() return rawget(self, 'position') or (self.speed:get() >= 0 and self.limit.origin:get() or self.limit.extent:get()) end
 
 -- Creates a new layer with positive integer key <n>.
 -- If <n> is nil or invalid, inserts new layer at end of list.
 function PolyWall:add(n, ...)
-	n = type(n) == 'number' and math.floor(n) or error(__E('lc', 'arg', 1, 'number'))
-	assert(not self[n], __E('lc', 'ovr', n))
+	n = type(n) == 'number' and math.floor(n) or error(__E('lc', 'arg')(1, 'number'))
+	assert(not self[n], __E('lc', 'ovr')(n))
 	local newInst = self:new(...)
 	self[n] = newInst
 	self.layer[n] = newInst
@@ -610,8 +620,8 @@ end
 -- Deletes a layer with positive integer key <n>.
 -- If <n> is nil or invalid, deletes the layer at end of list.
 function PolyWall:rm(n)
-	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg', 1, 'number'))
-	assert(self[n], __E('lr', 'dne', n))
+	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg')(1, 'number'))
+	assert(self[n], __E('lr', 'dne')(n))
 	self[n]:fullrw()
 	self[n]:fullrm()
 	self[n] = nil
@@ -635,8 +645,8 @@ end
 -- Type can be 's', 'n' or 'd'
 -- Returns the custom wall handle
 function PolyWall:wall(depth, t, ...)
-	assert(type(t) == 'string', __E('wc', 'arg', 1, 'string'))
-	return assert(self[t .. 'Wall'], __E('wc', 'inv', 1))(depth, ...)
+	assert(type(t) == 'string', __E('wc', 'arg')(1, 'string'))
+	return assert(self[t .. 'Wall'], __E('wc', 'inv')(1))(depth, ...)
 end
 -- Creates a standard wall
 -- Returns the custom wall handle but only if depth is 0
@@ -644,7 +654,7 @@ function PolyWall:sWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		local key = cw_create()
-		self.array[key] = self:new(...)
+		self.W[key] = self:new(...)
 		return key
 	else
 		for _, v in pairs(self.layer) do
@@ -658,7 +668,7 @@ function PolyWall:nWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		local key = cw_createNoCollision()
-		self.array[key] = self:new(...)
+		self.W[key] = self:new(...)
 		return key
 	else
 		for _, v in pairs(self.layer) do
@@ -672,7 +682,7 @@ function PolyWall:dWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		local key = cw_createDeadly()
-		self.array[key] = self:new(...)
+		self.W[key] = self:new(...)
 		return key
 	else
 		for _, v in pairs(self.layer) do
@@ -683,38 +693,40 @@ end
 
 
 function PolyWall:template(n, ...)
-	n = type(n) == 'number' and math.floor(n) or error(__E('tm', 'arg', 1, 'number'))
+	n = type(n) == 'number' and math.floor(n) or error(__E('tm', 'arg')(1, 'number'))
 	self:fullrm()
 	for i = 1, n do self:add(i, ...) end
 end
 
 -- Rearranges layers into a regular shape.
 -- Only affects layer indexes from 1 to <shape>
+-- All layers to be affected must exist
 function PolyWall:regularize(shape, ofs)
 	shape = verifyShape(shape)
 	local arc = math.tau / shape
 	local prev, cur = nil, arc * -0.5
 	for i = 1, shape do
 		prev = cur
-		cur = cur + arc
-		self[i].angle:set(prev, cur, ofs)
+		cur = cur + arc;
+		(self[i] or error(__E('tm', 'dne', 'tmq')(i), 2)).angle:set(prev, cur, ofs)
 	end
 end
 -- Rearranges layers into a proportional shape.
 -- Only affects layer indexes from 1 to ratio length
+-- All layers to be affected must exist
 -- Returns the largest index of the new layers
 function PolyWall:proportionalize(ofs, ...)
 	local t, ref = {...}, {0}
 	local l = #t
 	for i = 1, l do
-		assert(type(t[i]) == 'number', __E('tm', 'arg', 1 + i, 'number'))
+		assert(type(t[i]) == 'number', __E('tm', 'arg')(1 + i, 'number'))
 		ref[i + 1] = ref[i] + t[i]
 	end
-	assert(ref[l] > 0, __E('tm', 'sum'))
-	local prev = map(ref[1], 0, ref[l + 1], 0, math.tau)
+	assert(ref[l] > 0, __E('tm', 'sum')())
+	local prev = mapValue(ref[1], 0, ref[l + 1], 0, math.tau)
 	for i = 1, l do
-		local cur = map(ref[i + 1], 0, ref[l + 1], 0, math.tau)
-		self[i].angle:set(prev, cur, ofs)
+		local cur = mapValue(ref[i + 1], 0, ref[l + 1], 0, math.tau);
+		(self[i] or error(__E('tm', 'dne', 'tmq')(i), 2)).angle:set(prev, cur, ofs)
 		prev = cur
 	end
 	return l
@@ -724,7 +736,7 @@ end
 function PolyWall:advance(depth, mFrameTime)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
-		for _, v in pairs(self.array) do
+		for _, v in pairs(self.W) do
 			v:posset(v:posget() - mFrameTime * v.speed:get() * v.limit:dir())
 		end
 	else
@@ -741,7 +753,7 @@ end
 function PolyWall:step(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
-		for k, v in pairs(self.array) do
+		for k, v in pairs(self.W) do
 			local angle0, angle1 = v.angle:getres()
 			local pos, th, innerLim, outerLim = v:posget(), v.thickness:get(), v.limit:order()
 			if pos <= innerLim - math.abs(th) or pos >= outerLim + math.abs(th) then
@@ -769,7 +781,7 @@ end
 function PolyWall:fill(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
-		for k, v in pairs(self.array) do
+		for k, v in pairs(self.W) do
 			cw_setVertexColor4(k, unpack({v.vertex:chgetres(...)}))
 		end
 	else
