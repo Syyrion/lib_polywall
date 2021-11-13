@@ -16,14 +16,12 @@ local __E = setmetatable({
 	lr = 'LayerRemovalError',
 	lc = 'LayerCreationError',
 	wc = 'WallCreationError',
-	df = 'SetDefaultError',
 
 	dne = 'Layer <%d> does not exist. ',
 	tmq = 'Did you forget to run the template function first? ',
 	ovr = 'Cannot overwrite already existing layer <%d>. ',
 	sum = 'Sum of all values in ratio must be greater than 0. ',
 	inv = 'Argument #%d is invalid. ',
-	ret = 'Number of return values is incorrect. Should return %d values, got %d. ',
 	arg = 'Argument #%d is not a %s. ',
 	cus = '%s'
 }, {
@@ -43,33 +41,6 @@ local __E = setmetatable({
 })
 
 --[[
-	* DEFAULTER CLASS
-]]
-
-local __D = setmetatable({
-	set = function (self, fn, verify)
-		if type(fn) ~= "function" then self.fn = nil return end
-		local t = {fn()}
-		local l = #t
-		assert(l == 1, __E('df', 'ret')(1, l))
-		assert(verify(t[1]), __E('df', 'cus')('Verification failed. Define function did not return proper values.'))
-		self.fn = fn
-	end
-}, {
-	__call = function (this, inherit, fn)
-		return setmetatable({
-			__index = function (this, key)
-				local mt = getmetatable(this)
-				return mt.fn and key == 'val' and mt.fn() or mt.inherit[key]
-			end,
-			fn = fn,
-			inherit = inherit
-		}, this)
-	end
-})
-__D.__index = __D
-
---[[
 	* BASE DISCRETE CLASSES
 ]]
 
@@ -80,34 +51,35 @@ __D.__index = __D
 local Discrete = {}
 Discrete.__index = Discrete
 function Discrete:new(init)
-	local newInst = setmetatable({}, __D(self))
+	local newInst = setmetatable({}, self)
 	newInst.__index = newInst
 	newInst:set(init)
 	return newInst
 end
 -- Sets a value. If verification fails, the value is removed
 function Discrete:set(val) self.val = self.verify(val) and val or nil end
--- Gets a value
 function Discrete:get() return self.val end
+-- Defines a value's get function
+function Discrete:define(fn) self.get = type(fn) == "function" and fn or nil end
 -- Gets a value without searching for a default value
 function Discrete:rawget() return rawget(self, 'val') end
--- Gets the default value regardless of if a value is set
-function Discrete:defget()
-	local mt = getmetatable(self)
-	return mt.fn and mt.fn() or mt.inherit['val']
-end
 -- Sets a value to its default
-function Discrete:freeze() self.val = self:defget() end
--- Defines a value's default function
-function Discrete:define(fn) getmetatable(self):set(fn, self.verify) end
+function Discrete:freeze() self.val = self:get() end
 
 --[[
 	* Discrete Numeric class
-	-- Handles a single numerical parameter value with default value 0
+	-- Handles a single numerical parameter value
 ]]
-local DiscreteNumeric = setmetatable({val = 0}, Discrete)
+local DiscreteNumeric = setmetatable({}, Discrete)
 DiscreteNumeric.__index = DiscreteNumeric
 function DiscreteNumeric.verify(val) return type(val) == 'number' end
+
+--[[
+	* Default Discrete Numeric class
+	-- Adds a default value of 0 to DiscreteNumeric
+]]
+local DefaultDiscreteNumeric = setmetatable({val = 0}, DiscreteNumeric)
+DefaultDiscreteNumeric.__index = DefaultDiscreteNumeric
 
 --[[
 	* Discrete Boolean class
@@ -128,7 +100,8 @@ function DiscreteBoolean.verify(val) return type(val) == 'boolean' end
 ]]
 local DiscreteTransform = setmetatable({}, Discrete)
 DiscreteTransform.__index = DiscreteTransform
-function DiscreteTransform:run(...) return self.val(...) end
+function DiscreteTransform.verify(val) return type(val) == 'function' end
+function DiscreteTransform:run(...) return self:get()(...) end
 
 --[[
 	* Discrete Position Transformation Class
@@ -136,7 +109,6 @@ function DiscreteTransform:run(...) return self.val(...) end
 ]]
 local DiscretePositionTransform = setmetatable({val = function (a, b) return a, b end}, DiscreteTransform)
 DiscretePositionTransform.__index = DiscretePositionTransform
-function DiscretePositionTransform.verify(val) return type(val) == 'function' end
 
 --[[
 	* Color Transformation Class
@@ -144,7 +116,6 @@ function DiscretePositionTransform.verify(val) return type(val) == 'function' en
 ]]
 local DiscreteColorTransform = setmetatable({val = function (r, g, b, a) return r, g, b, a end}, DiscreteTransform)
 DiscreteColorTransform.__index = DiscreteColorTransform
-function DiscreteColorTransform.verify(val) return type(val) == 'function' end
 
 
 
@@ -153,25 +124,21 @@ function DiscreteColorTransform.verify(val) return type(val) == 'function' end
 ]]
 
 --[[
-	* Discrete Channel Class
-	Handles a discrete col channel
-]]
-local DiscreteChannel = setmetatable({}, DiscreteNumeric)
-DiscreteChannel.__index = DiscreteChannel
-function DiscreteChannel:set(val) self.val = self.verify(val) and clamp(math.floor(val), 0, 255) or nil end
-
---[[
 	* Color Channel Classes
 	Each handles a single channel
 ]]
-local RChannel = setmetatable({}, __D(DiscreteChannel, function () return ({s_getMainColor()})[1] end))
+local RChannel = setmetatable({}, DiscreteNumeric)
 RChannel.__index = RChannel
-local GChannel = setmetatable({}, __D(DiscreteChannel, function () return ({s_getMainColor()})[2] end))
+function RChannel:get() return self.val or ({s_getMainColor()})[1] end
+local GChannel = setmetatable({}, DiscreteNumeric)
 GChannel.__index = GChannel
-local BChannel = setmetatable({}, __D(DiscreteChannel, function () return ({s_getMainColor()})[3] end))
+function GChannel:get() return self.val or ({s_getMainColor()})[2] end
+local BChannel = setmetatable({}, DiscreteNumeric)
 BChannel.__index = BChannel
-local AChannel = setmetatable({}, __D(DiscreteChannel, function () return ({s_getMainColor()})[4] end))
+function BChannel:get() return self.val or ({s_getMainColor()})[3] end
+local AChannel = setmetatable({}, DiscreteNumeric)
 AChannel.__index = AChannel
+function AChannel:get() return self.val or ({s_getMainColor()})[4] end
 
 Channel = {
 	r = RChannel,
@@ -197,7 +164,6 @@ function Channel:sethsv(h, s, v)
 end
 function Channel:get() return self.r:get(), self.g:get(), self.b:get(), self.a:get() end
 function Channel:rawget() return self.r:rawget(), self.g:rawget(), self.b:rawget(), self.a:rawget() end
-function Channel:defget() return self.r:defget(), self.g:defget(), self.b:defget(), self.a:defget() end
 function Channel:freeze() self.r:freeze() self.g:freeze() self.b:freeze() self.a:freeze() end
 function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn) self.b:define(bfn) self.a:define(afn) end
 
@@ -216,7 +182,7 @@ local DiscreteVertex = {
 	ch = Channel,
 	pol = DiscretePositionTransform,
 	cart = DiscretePositionTransform,
-	col =DiscreteColorTransform
+	col = DiscreteColorTransform
 }
 DiscreteVertex.__index = DiscreteVertex
 function DiscreteVertex:new(r, g, b, a, pol, cart, col)
@@ -229,7 +195,7 @@ function DiscreteVertex:new(r, g, b, a, pol, cart, col)
 	newInst.__index = newInst
 	return newInst
 end
-function DiscreteVertex:getres(...)
+function DiscreteVertex:getresult(...)
 	local r, g, b, a = self.ch:get()
 	return self.col:run(r, g, b, a, ...)
 end
@@ -269,40 +235,31 @@ function QuadVertex:chrawget()
 	local r2, g2, b2, a2 = self[2].ch:rawget()
 	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3].ch:rawget()
 end
-function QuadVertex:chdefget()
-	local r0, g0, b0, a0 = self[0].ch:defget()
-	local r1, g1, b1, a1 = self[1].ch:defget()
-	local r2, g2, b2, a2 = self[2].ch:defget()
-	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3].ch:defget()
-end
 function QuadVertex:chfreeze() for i = 0, 3 do self[i].ch:freeze() end end
 function QuadVertex:chdefine(rfn, gfn, bfn, afn) for i = 0, 3 do self[i].ch:define(rfn, gfn, bfn, afn) end end
 
-function QuadVertex:chgetres(...)
-	local r0, g0, b0, a0 = self[0]:getres(...)
-	local r1, g1, b1, a1 = self[1]:getres(...)
-	local r2, g2, b2, a2 = self[2]:getres(...)
-	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3]:getres(...)
+function QuadVertex:chgetresult(...)
+	local r0, g0, b0, a0 = self[0]:getresult(...)
+	local r1, g1, b1, a1 = self[1]:getresult(...)
+	local r2, g2, b2, a2 = self[2]:getresult(...)
+	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3]:getresult(...)
 end
 
 function QuadVertex:polset(pol) for i = 0, 3 do self[i].pol:set(pol) end end
 function QuadVertex:polget() return self[0].pol:get(), self[1].pol:get(), self[2].pol:get(), self[3].pol:get() end
 function QuadVertex:polrawget() return self[0].pol:rawget(), self[1].pol:rawget(), self[2].pol:rawget(), self[3].pol:rawget() end
-function QuadVertex:poldefget() return self[0].pol:defget(), self[1].pol:defget(), self[2].pol:defget(), self[3].pol:defget() end
 function QuadVertex:polfreeze() for i = 0, 3 do self[i].pol:freeze() end end
 function QuadVertex:poldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 
 function QuadVertex:cartset(cart) for i = 0, 3 do self[i].cart:set(cart) end end
 function QuadVertex:cartget() return self[0].cart:get(), self[1].cart:get(), self[2].cart:get(), self[3].cart:get() end
 function QuadVertex:cartrawget() return self[0].cart:rawget(), self[1].cart:rawget(), self[2].cart:rawget(), self[3].cart:rawget() end
-function QuadVertex:cartdefget() return self[0].cart:defget(), self[1].cart:defget(), self[2].cart:defget(), self[3].cart:defget() end
 function QuadVertex:cartfreeze() for i = 0, 3 do self[i].pol:freeze() end end
 function QuadVertex:cartdefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 
 function QuadVertex:colset(col) for i = 0, 3 do self[i].col:set(col) end end
 function QuadVertex:colget() return self[0].col:get(), self[1].col:get(), self[2].col:get(), self[3].col:get() end
 function QuadVertex:colrawget() return self[0].col:rawget(), self[1].col:rawget(), self[2].col:rawget(), self[3].col:rawget() end
-function QuadVertex:coldefget() return self[0].col:defget(), self[1].col:defget(), self[2].col:defget(), self[3].col:defget() end
 function QuadVertex:colfreeze() for i = 0, 3 do self[i].pol:freeze() end end
 function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 
@@ -317,9 +274,9 @@ function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 	Handles two angles and an offset
 ]]
 local DualAngle = {
-	origin = DiscreteNumeric,
-	extent = DiscreteNumeric,
-	offset = DiscreteNumeric
+	origin = DefaultDiscreteNumeric,
+	extent = DefaultDiscreteNumeric,
+	offset = DefaultDiscreteNumeric
 }
 DualAngle.__index = DualAngle
 function DualAngle:new(a0, a1, ofs)
@@ -334,10 +291,9 @@ end
 function DualAngle:set(a0, a1, ofs) self.origin:set(a0) self.extent:set(a1) self.offset:set(ofs) end
 function DualAngle:get() return self.origin:get(), self.extent:get(), self.offset:get() end
 function DualAngle:rawget() return self.origin:rawget(), self.extent:rawget(), self.offset:rawget() end
-function DualAngle:defget() return self.origin:defget(), self.extent:defget(), self.offset:defget() end
 function DualAngle:freeze() self.origin:freeze() self.extent:freeze() self.offset:freeze() end
 function DualAngle:define(a0fn, a1fn, ofsfn) self.origin:define(a0fn) self.extent:define(a1fn) self.offset:define(ofsfn) end
-function DualAngle:getres()
+function DualAngle:getresult()
 	local ofs = self.offset:get()
 	return self.origin:get() + ofs, self.extent:get() + ofs
 end
@@ -353,8 +309,9 @@ LimitOrigin.__index = LimitOrigin
 	* Limit tail parameter class
 	Contains default ending limit
 ]]
-local LimitExtent = setmetatable({}, __D(DiscreteNumeric, getPolygonRadius))
+local LimitExtent = setmetatable({}, DiscreteNumeric)
 LimitExtent.__index = LimitExtent
+function LimitExtent:get() return self.val or getPivotRadius() end
 
 --[[
 	* Dual limit parameter class
@@ -376,7 +333,6 @@ end
 function DualLimit:set(lim0, lim1) self.origin:set(lim0) self.extent:set(lim1) end
 function DualLimit:get() return self.origin:get(), self.extent:get() end
 function DualLimit:rawget() return self.origin:rawget(), self.extent:rawget() end
-function DualLimit:defget() return self.origin:defget(), self.extent:defget() end
 function DualLimit:freeze() self.origin:freeze() self.extent:freeze() end
 function DualLimit:define(lim0fn, lim1fn) self.origin:define(lim0fn) self.extent:define(lim1fn) end
 function DualLimit:swap()
@@ -394,24 +350,29 @@ function DualLimit:dir() return self.origin:get() >= self.extent:get() and 1 or 
 	* Thickness parameter class
 	Contains default thickness value
 ]]
-local Thickness = setmetatable({val = 40}, DiscreteNumeric)
+local Thickness = setmetatable({val = THICKNESS}, DiscreteNumeric)
 Thickness.__index = Thickness
 
 --[[
 	* Speed parameter class
 	Contains default speed calculation function
 ]]
-local Speed = setmetatable({}, __D(DiscreteNumeric, getWallSpeed))
+local Speed = setmetatable({}, DiscreteNumeric)
 Speed.__index = Speed
+function Speed:get() return self.val or getWallSpeedInUnitsPerFrame() end
 
-local MockPlayerAngle = setmetatable({}, __D(DiscreteNumeric, u_getPlayerAngle))
+local MockPlayerAngle = setmetatable({}, DiscreteNumeric)
 MockPlayerAngle.__index = MockPlayerAngle
-local MockPlayerRadius = setmetatable({}, __D(DiscreteNumeric, getDistanceBetweenCenterAndPlayerTip))
+function MockPlayerAngle:get() return self.val or u_getPlayerAngle() end
+local MockPlayerRadius = setmetatable({}, DiscreteNumeric)
 MockPlayerRadius.__index = MockPlayerRadius
-local MockPlayerHeight = setmetatable({}, __D(DiscreteNumeric, getPlayerHeight))
+function MockPlayerRadius:get() return self.val or getDistanceBetweenCenterAndPlayerTip() end
+local MockPlayerHeight = setmetatable({}, DiscreteNumeric)
 MockPlayerHeight.__index = MockPlayerHeight
-local MockPlayerWidth = setmetatable({}, __D(DiscreteNumeric, getPlayerWidth))
+function MockPlayerHeight:get() return self.val or getPlayerHeight() end
+local MockPlayerWidth = setmetatable({}, DiscreteNumeric)
 MockPlayerWidth.__index = MockPlayerWidth
+function MockPlayerWidth:get() return self.val or getPlayerWidth() end
 
 local __VERIFYDEPTH = function (depth)
 	return type(depth) == 'number' and math.floor(depth) or 0
@@ -426,7 +387,6 @@ function __MASTER:rw(key)
 	cw_setVertexPos4(key, 0, 0, 0, 0, 0, 0, 0, 0)
 	cw_destroy(key)
 	self.W[key] = nil
-	collectgarbage()
 end
 function __MASTER:fullrw(depth)
 	depth = __VERIFYDEPTH(depth)
@@ -485,8 +445,8 @@ end
 	* MockPlayer class
 ]]
 local MockPlayer = setmetatable({
-	angle = DiscreteNumeric,
-	offset = DiscreteNumeric,
+	angle = MockPlayerAngle,
+	offset = DefaultDiscreteNumeric,
 	radius = MockPlayerRadius,
 	height = MockPlayerHeight,
 	width = MockPlayerWidth,
@@ -532,7 +492,7 @@ function MockPlayer:step(depth, mFocus, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		for k, v in pairs(self.W) do
-			local angle, radius, halfWidth = v.angle:get(), v.radius:get(), v.width:get() * 0.5 * (mFocus and FOCUSRATIO or 1)
+			local angle, radius, halfWidth = v.angle:get() + v.offset:get(), v.radius:get(), v.width:get() * 0.5 * (mFocus and FOCUSRATIO or 1)
 			local baseRadius, accurate = radius - v.height:get(), v.accurate:get()
 			local sideRadius = accurate and (halfWidth * halfWidth + baseRadius * baseRadius) ^ 0.5 or baseRadius
 			local sideAngle = (accurate and math.atan or function (n)
@@ -557,7 +517,7 @@ function MockPlayer:fill(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		for k, v in pairs(self.W) do
-			cw_setVertexColor4(k, unpack({v.vertex:chgetres(...)}))
+			cw_setVertexColor4(k, unpack({v.vertex:chgetresult(...)}))
 		end
 	else
 		for _, v in pairs(self.layer) do
@@ -570,25 +530,25 @@ end
 	* PolyWall Class
 ]]
 PolyWall = setmetatable({
-	angle = DualAngle,
-	limit = DualLimit,
 	thickness = Thickness,
 	speed = Speed,
 	vertex = QuadVertex,
+	angle = DualAngle,
+	limit = DualLimit,
 	layer = setmetatable({}, __WEAKVALUES),
 	W = {},
 	player = MockPlayer
 }, __MASTER)
 PolyWall.__index = PolyWall
 
-function PolyWall:new(a0, a1, ofs, lim0, lim1, th, sp, p, r, g, b, a, pol, cart, col)
+function PolyWall:new(th, sp, p, r, g, b, a, pol, cart, col, a0, a1, ofs, lim0, lim1)
 	local newInst = setmetatable({
-		angle = self.angle:new(a0, a1, ofs),
-		limit = self.limit:new(lim0, lim1),
 		thickness = self.thickness:new(th),
 		speed = self.speed:new(sp),
 		position = type(p) == 'number' and p or nil,
 		vertex = self.vertex:new(r, g, b, a, pol, cart, col),
+		angle = self.angle:new(a0, a1, ofs),
+		limit = self.limit:new(lim0, lim1),
 		layer = setmetatable({}, __WEAKVALUES),
 		W = {}
 	}, {
@@ -610,8 +570,8 @@ function PolyWall:posget() return rawget(self, 'position') or (self.speed:get() 
 -- Creates a new layer with positive integer key <n>.
 -- If <n> is nil or invalid, inserts new layer at end of list.
 function PolyWall:add(n, ...)
-	n = type(n) == 'number' and math.floor(n) or error(__E('lc', 'arg')(1, 'number'))
-	assert(not self[n], __E('lc', 'ovr')(n))
+	n = type(n) == 'number' and math.floor(n) or error(__E('lc', 'arg')(1, 'number'), 2)
+	if self[n] then error(__E('lc', 'ovr')(n), 2) end
 	local newInst = self:new(...)
 	self[n] = newInst
 	self.layer[n] = newInst
@@ -620,12 +580,11 @@ end
 -- Deletes a layer with positive integer key <n>.
 -- If <n> is nil or invalid, deletes the layer at end of list.
 function PolyWall:rm(n)
-	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg')(1, 'number'))
-	assert(self[n], __E('lr', 'dne')(n))
+	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg')(1, 'number'), 2)
+	if not self[n] then error(__E('lr', 'dne')(n), 2) end
 	self[n]:fullrw()
 	self[n]:fullrm()
 	self[n] = nil
-	collectgarbage()
 end
 -- Deletes all layers
 function PolyWall:fullrm(depth)
@@ -693,7 +652,7 @@ end
 
 
 function PolyWall:template(n, ...)
-	n = type(n) == 'number' and math.floor(n) or error(__E('tm', 'arg')(1, 'number'))
+	n = type(n) == 'number' and math.floor(n) or error(__E('tm', 'arg')(1, 'number'), 2)
 	self:fullrm()
 	for i = 1, n do self:add(i, ...) end
 end
@@ -754,7 +713,7 @@ function PolyWall:step(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		for k, v in pairs(self.W) do
-			local angle0, angle1 = v.angle:getres()
+			local angle0, angle1 = v.angle:getresult()
 			local pos, th, innerLim, outerLim = v:posget(), v.thickness:get(), v.limit:order()
 			if pos <= innerLim - math.abs(th) or pos >= outerLim + math.abs(th) then
 				self:rw(k)
@@ -782,7 +741,7 @@ function PolyWall:fill(depth, ...)
 	depth = __VERIFYDEPTH(depth)
 	if depth <= 0 then
 		for k, v in pairs(self.W) do
-			cw_setVertexColor4(k, unpack({v.vertex:chgetres(...)}))
+			cw_setVertexColor4(k, unpack({v.vertex:chgetresult(...)}))
 		end
 	else
 		for _, v in pairs(self.layer) do
