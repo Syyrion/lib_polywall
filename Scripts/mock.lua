@@ -1,5 +1,5 @@
 u_execDependencyScript("ohvrvanilla", "base", "vittorio romeo", "utils.lua")
-print("!! WARNING !! mock.lua is deprecated and will be removed on Jan. 1 2023.\nNo further updates will be given to this script.\nPlease migrate code to use master.lua.")
+print("!! WARNING !! mock.lua is deprecated.\nNo further feature updates will be given to this script.\nPlease migrate code to use master.lua.")
 
 --[[ Mock Class ]]--
 -- An abstract class of which MockPolygon and MockPlayer inherit from
