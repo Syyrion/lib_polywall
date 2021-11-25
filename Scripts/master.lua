@@ -30,6 +30,7 @@ local __E = setmetatable({
 	sum = 'Sum of all values in ratio must be greater than 0. ',
 	inv = 'Argument #%d is invalid. ',
 	arg = 'Argument #%d is not a %s. ',
+	key = 'Invalid or missing custom wall key ',
 	ila = 'Attempted to create an illegal association. ',
 	cus = '%s'
 }, {
@@ -41,8 +42,8 @@ local __E = setmetatable({
 		return setmetatable({
 			msg = msg
 		}, {
-			__call = function (this_, ...)
-				return string.format(this_.msg, ...)
+			__call = function (this, ...)
+				return string.format(this.msg, ...)
 			end
 		})
 	end
@@ -72,7 +73,10 @@ function Discrete:define(fn) self.get = type(fn) == "function" and fn or nil end
 -- Gets a value without searching for a default value
 function Discrete:rawget() return rawget(self, 'val') end
 -- Sets a value to its default
-function Discrete:freeze() self.val = self:get() end
+function Discrete:freeze()
+	self.val = nil
+	self.val = self:get()
+end
 
 --[[
 	* Discrete Numeric class
@@ -380,7 +384,7 @@ MockPlayerHeight.__index = MockPlayerHeight
 function MockPlayerHeight:get() return self.val or getPlayerHeight() end
 local MockPlayerWidth = setmetatable({}, DiscreteNumeric)
 MockPlayerWidth.__index = MockPlayerWidth
-function MockPlayerWidth:get() return self.val or getPlayerWidth() end
+function MockPlayerWidth:get() return self.val or getPlayerBaseWidth() end
 
 local __VERIFYDEPTH = function (depth)
 	return type(depth) == 'number' and math.floor(depth) or 0
@@ -409,36 +413,10 @@ function __MASTER:tint(depth, r, g, b, a)
 	tint(self, depth)
 end
 
--- Union of advance and tint.
-function __MASTER:arrange(depth, mFrameTime, r, g, b, a)
-	self:advance(depth, mFrameTime)
-	self:tint(depth, r, g, b, a)
-end
-
--- Union of fill and step.
--- Note that polar, cartesian, and color transformation parameters are unioned.
-function __MASTER:update(depth, ...)
-	self:step(depth, ...)
-	self:fill(depth, ...)
-end
-
--- Union of advance and step.
-function __MASTER:move(depth, mFrameTime, ...)
-	self:advance(depth, mFrameTime)
-	self:step(depth, ...)
-end
-
--- Union of tint and step.
+-- Union of tint and fill.
 function __MASTER:shade(depth, r, g, b, a, ...)
 	self:tint(depth, r, g, b, a)
 	self:fill(depth, ...)
-end
-
--- Union of arrange and update.
--- Note that polar, cartesian, and color transformation parameters are unioned.
-function __MASTER:draw(depth, mFrameTime, r, g, b, a, ...)
-	self:arrange(depth, mFrameTime, r, g, b, a)
-	self:update(depth, ...)
 end
 
 --[[
@@ -457,7 +435,7 @@ local MockPlayer = setmetatable({
 MockPlayer.__index = MockPlayer
 
 function MockPlayer:new(parent, a0, ofs, d, h, w, r, g, b, a, pol, cart, col, acc)
-	if self.__WALL then error(__E('pc', 'ila')(), 2) end
+	if self.__STALE then error(__E('pc', 'ila')(), 2) end
 	local newInst = setmetatable({
 		angle = self.angle:new(a0),
 		offset = self.offset:new(ofs),
@@ -474,29 +452,32 @@ function MockPlayer:new(parent, a0, ofs, d, h, w, r, g, b, a, pol, cart, col, ac
 end
 
 -- Creates a MockPlayer
--- Returns the custom wall handle but only if depth is 0
+-- Returns a tuple of all created wall key objects
 function MockPlayer:create(depth, ...)
 	depth = __VERIFYDEPTH(depth)
+	local playerKeys = {}
 	local function create(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = cw_createNoCollision()
-			currentLayer.W[key] = currentLayer:new(currentLayer, ...)
-			currentLayer.W[key].__WALL = true
-			return key
+			local key, player = {K = cw_createNoCollision()}, currentLayer:new(currentLayer, ...)
+			player.__STALE = true
+			currentLayer.W[key] = player
+			table.insert(playerKeys, key)
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
 				create(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
-	return create(self, depth, ...)
+	create(self, depth, ...)
+	return unpack(playerKeys)
 end
 
 function MockPlayer:rmWall(key)
-	key = type(key) == 'number' and math.floor(key) or error(__E('pr', 'arg')(1, 'number'), 2)
-	if not self.W[key] then error(__E('pr', 'w', 'dne')(key), 2) end
-	cw_setVertexPos4(key, 0, 0, 0, 0, 0, 0, 0, 0)
-	cw_destroy(key)
+	if type(key) ~= 'table' then error(__E('pr', 'arg')(1, 'table'), 2) end
+	if type(key.K) ~= 'number' then error(__E('pr', 'key')(), 2) end
+	if not self.W[key] then error(__E('pr', 'w', 'dne')(key.K), 2) end
+	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
+	cw_destroy(key.K)
 	self.W[key] = nil
 end
 
@@ -516,9 +497,6 @@ function MockPlayer:rrmWall(depth)
 	rrmWall(self, depth)
 end
 
--- MockPlayer advance function has no use
-function MockPlayer:advance() end
-
 function MockPlayer:step(depth, mFocus, ...)
 	depth = __VERIFYDEPTH(depth)
 	local function step(currentLayer, layerDepth, ...)
@@ -537,7 +515,7 @@ function MockPlayer:step(depth, mFocus, ...)
 				local x0, y0 = wall.vertex[0].cart:run(r0 * math.cos(a0), r0 * math.sin(a0), ...)
 				local x1, y1 = wall.vertex[1].cart:run(r1 * math.cos(a1), r1 * math.sin(a1), ...)
 				local x2, y2 = wall.vertex[2].cart:run(r2 * math.cos(a2), r2 * math.sin(a2), ...)
-				cw_setVertexPos4(key, x0, y0, x1, y1, x2, y2, x2, y2)
+				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x2, y2)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
@@ -554,7 +532,7 @@ function MockPlayer:fill(depth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2 = wall.vertex:chresult(...)
-				cw_setVertexColor4(key, r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, r2, g2, b2, a2)
+				cw_setVertexColor4(key.K, r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, r2, g2, b2, a2)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
@@ -563,6 +541,13 @@ function MockPlayer:fill(depth, ...)
 		end
 	end
 	fill(self, depth, ...)
+end
+
+-- Union of step and shade.
+-- Note that polar, cartesian, and color transformation parameters are unioned.
+function MockPlayer:draw(depth, mFocus, r, g, b, a, ...)
+	self:step(depth, mFocus, ...)
+	self:shade(depth, r, g, b, a, ...)
 end
 
 --[[
@@ -581,7 +566,7 @@ PolyWall = setmetatable({
 PolyWall.__index = PolyWall
 
 function PolyWall:new(th, sp, p, r, g, b, a, pol, cart, col, a0, a1, ofs, lim0, lim1)
-	if self.__WALL then error(__E('wc', 'ila')(), 2) end
+	if self.__STALE then error(__E('wc', 'ila')(), 2) end
 	local newInst = setmetatable({
 		__PARENT = self,
 		thickness = self.thickness:new(th),
@@ -647,10 +632,11 @@ end
 
 -- Deletes a layer with cw key <n>.
 function PolyWall:rmWall(key)
-	key = type(key) == 'number' and math.floor(key) or error(__E('wr', 'arg')(1, 'number'), 2)
-	if not self.W[key] then error(__E('wr', 'w', 'dne')(key), 2) end
-	cw_setVertexPos4(key, 0, 0, 0, 0, 0, 0, 0, 0)
-	cw_destroy(key)
+	if type(key) ~= 'table' then error(__E('pr', 'arg')(1, 'table'), 2) end
+	if type(key.K) ~= 'number' then error(__E('pr', 'key')(), 2) end
+	if not self.W[key] then error(__E('wr', 'w', 'dne')(key.K), 2) end
+	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
+	cw_destroy(key.K)
 	self.W[key] = nil
 end
 
@@ -673,73 +659,116 @@ end
 
 -- Creates a wall of specified type
 -- Type can be 's', 'n' or 'd'
--- Returns the custom wall handle
+-- Returns a tuple of all created wall key objects
 function PolyWall:wall(depth, t, ...)
 	if type(t) ~= 'string' then error(__E('wc', 'arg')(1, 'string'), 2) end
 	return (self[t .. 'Wall'] or error(__E('wc', 'inv')(1), 2))(depth, ...)
 end
 
 -- Creates a standard wall
--- Returns the custom wall handle but only if depth is 0
+-- Returns a tuple of all created wall key objects
 function PolyWall:sWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
+	local wallKeys = {}
 	local function sWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = cw_create()
-			currentLayer.W[key] = currentLayer:new(...)
-			currentLayer.W[key].__WALL = true
-			return key
+			local key, wall = {K = cw_create()}, currentLayer:new(...)
+			wall.__STALE = true
+			currentLayer.W[key] = wall
+			table.insert(wallKeys, key)
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
 				sWall(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
-	return sWall(self, depth, ...)
+	sWall(self, depth, ...)
+	return unpack(wallKeys)
 end
 
 -- Creates a non-solid wall
--- Returns the custom wall handle but only if depth is 0
+-- Returns a tuple of all created wall key objects
 function PolyWall:nWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
+	local wallKeys = {}
 	local function nWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = cw_createNoCollision()
-			currentLayer.W[key] = currentLayer:new(...)
-			currentLayer.W[key].__WALL = true
-			return key
+			local key, wall = {K = cw_createNoCollision()}, currentLayer:new(...)
+			wall.__STALE = true
+			currentLayer.W[key] = wall
+			table.insert(wallKeys, key)
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
 				nWall(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
-	return nWall(self, depth, ...)
+	nWall(self, depth, ...)
+	return unpack(wallKeys)
 end
 
 -- Creates a deadly wall
--- Returns the custom wall handle but only if depth is 0
+-- Returns a tuple of all created wall key objects
 function PolyWall:dWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
+	local wallKeys = {}
 	local function dWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = cw_createDeadly()
-			currentLayer.W[key] = currentLayer:new(...)
-			currentLayer.W[key].__WALL = true
-			return key
+			local key, wall = {K = cw_createDeadly()}, currentLayer:new(...)
+			wall.__STALE = true
+			currentLayer.W[key] = wall
+			table.insert(wallKeys, key)
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
 				dWall(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
-	return dWall(self, depth, ...)
+	dWall(self, depth, ...)
+	return unpack(wallKeys)
+end
+
+function PolyWall:pivotCap(depth)
+	depth = __VERIFYDEPTH(depth)
+	local wallKeys = {}
+	local function pivotCap(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			local key = currentLayer:nWall(0, nil, 0, 0, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0)
+			currentLayer.W[key].thickness:define(getCapRadius)
+			table.insert(wallKeys, key)
+		else
+			for _, nextLayer in pairs(currentLayer.L) do
+				pivotCap(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	pivotCap(self, depth)
+	return unpack(wallKeys)
+end
+
+function PolyWall:pivotBorder(depth)
+	depth = __VERIFYDEPTH(depth)
+	local wallKeys = {}
+	local function pivotBorder(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			local key = currentLayer:nWall(0, nil, 0, 0, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0)
+			currentLayer.W[key].thickness:define(getPivotRadius)
+			currentLayer.W[key].limit.extent:define(getCapRadius)
+			table.insert(wallKeys, key)
+		else
+			for _, nextLayer in pairs(currentLayer.L) do
+				pivotBorder(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	pivotBorder(self, depth)
+	return unpack(wallKeys)
 end
 
 -- Creates <n> layers ranging from [0, <n>)
 function PolyWall:template(depth, n, ...)
 	depth = __VERIFYDEPTH(depth)
-	n = type(n) == 'number' and math.floor(n) - 1 or error(__E('tm', 'arg')(1, 'number'), 2)
+	n = type(n) == 'number' and math.floor(n) - 1 or error(__E('tm', 'arg')(2, 'number'), 2)
 	local function template(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			currentLayer:rrmLayer()
@@ -851,7 +880,7 @@ function PolyWall:step(depth, ...)
 					local x1, y1 = wall.vertex[1].cart:run(r1 * math.cos(a1), r1 * math.sin(a1), ...)
 					local x2, y2 = wall.vertex[2].cart:run(r2 * math.cos(a2), r2 * math.sin(a2), ...)
 					local x3, y3 = wall.vertex[3].cart:run(r3 * math.cos(a3), r3 * math.sin(a3), ...)
-					cw_setVertexPos4(key, x0, y0, x1, y1, x2, y2, x3, y3)
+					cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
 				end
 			end
 		else
@@ -869,7 +898,7 @@ function PolyWall:fill(depth, ...)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				cw_setVertexColor4(key, wall.vertex:chresult(...))
+				cw_setVertexColor4(key.K, wall.vertex:chresult(...))
 			end
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
@@ -880,7 +909,32 @@ function PolyWall:fill(depth, ...)
 	fill(self, depth, ...)
 end
 
--- TODO: Finish
+-- Union of advance and tint.
+function PolyWall:arrange(depth, mFrameTime, r, g, b, a)
+	self:advance(depth, mFrameTime)
+	self:tint(depth, r, g, b, a)
+end
+
+-- Union of fill and step.
+-- Note that polar, cartesian, and color transformation parameters are unioned.
+function PolyWall:update(depth, ...)
+	self:step(depth, ...)
+	self:fill(depth, ...)
+end
+
+-- Union of advance and step.
+function PolyWall:move(depth, mFrameTime, ...)
+	self:advance(depth, mFrameTime)
+	self:step(depth, ...)
+end
+
+-- Union of arrange and update.
+-- Note that polar, cartesian, and color transformation parameters are unioned.
+function PolyWall:draw(depth, mFrameTime, r, g, b, a, ...)
+	self:arrange(depth, mFrameTime, r, g, b, a)
+	self:update(depth, ...)
+end
+
 -- Sorts wall CW handles such that lower numbered handles are moved to lower layers and higher numbered handles to higher layers
 -- Sortings acts on all walls of all descendant layers of the origin layer
 -- Order can be reversed by setting <decending> parameter to true
@@ -888,60 +942,46 @@ end
 -- Only affects currently existing walls
 -- Layering within layers is unstable and will very likely change
 function PolyWall:sort(depth, descending)
-	depth = type(depth) == 'number' and depth >= 1 and math.floor(depth) or 1
-	local function map(currentLayer, layerDepth, currentBranch, wallKeys, playerKeys)
-		if layerDepth == 0 then
-			currentBranch.W = {}
-			for key, wall in pairs(currentLayer.W) do
-				table.insert(wallKeys, key)
-				wallKeys.ln = wallKeys.ln + 1
-				table.insert(currentBranch.W, wall)
-			end
-			currentBranch.P = {}
-			for key, player in pairs(currentLayer.P.W) do
-				table.insert(playerKeys, key)
-				playerKeys.ln = playerKeys.ln + 1
-				table.insert(currentBranch.P, player)
-			end
-			currentBranch[1] = true
-		else
-			for nextLayerId, nextLayer in pairs(currentLayer.L) do
-				local branch = map(nextLayer, layerDepth - 1, {ln = 0}, wallKeys, playerKeys)
-				if branch[1] then
-					branch.ix = nextLayerId
-					table.insert(currentBranch, branch)
-					currentBranch.ln = currentBranch.ln + 1
-				end
-			end
+	depth = __VERIFYDEPTH(depth)
+	local keys, layers = {len = 0}, {len = 0}
+	local function map(currentLayer, layerDepth, currentBranch)
+		for key, _ in pairs(currentLayer.W) do
+			table.insert(keys, key.K)
+			keys.len = keys.len + 1
 		end
-		return currentBranch, wallKeys, playerKeys
-	end
-	local layerTree, wallList, playerList = map(self, depth, {ln = 0}, {ln = 0}, {ln = 0})
-
-	local comparison = descending and function (a, b) return a > b end or nil
-	table.sort(wallList, comparison)
-	table.sort(playerList, comparison)
-
-	local function relink(currentLayer, layerDepth, currentBranch, wallKeys, playerKeys)
-		if layerDepth == 0 then
-			currentLayer.W = {}
-			for _, wall in pairs(currentBranch.W) do
-				currentLayer.W[wallKeys[wallKeys.ln]] = wall
-				wallKeys.ln = wallKeys.ln - 1
-			end
-			currentLayer.P.W = {}
-			for _, player in pairs(currentBranch.P) do
-				currentLayer.P.W[playerKeys[playerKeys.ln]] = player
-				playerKeys.ln = playerKeys.ln - 1
-			end
-		else
-			table.sort(currentBranch, function (a, b)
-				return a.ix < b.ix
-			end)
-			for i = 1, currentBranch.ln do
-				relink(currentLayer[currentBranch[i].ix], layerDepth - 1, currentBranch[i], wallKeys, playerKeys)
-			end
+		for key, _ in pairs(currentLayer.P.W) do
+			table.insert(keys, key.K)
+			keys.len = keys.len + 1
+		end
+		if layerDepth <= 0 then return end
+		for nextLayerId, nextLayer in pairs(currentLayer.L) do
+			local nextBranch = {ix = nextLayerId, len = 0}
+			table.insert(currentBranch, nextBranch)
+			currentBranch.len = currentBranch.len + 1
+			map(nextLayer, layerDepth - 1, nextBranch)
 		end
 	end
-	relink(self, depth, layerTree, wallList, playerList)
+	map(self, depth, layers)
+	table.sort(keys, descending and function (a, b)
+		return a > b
+	end or nil)
+	local keyIx = 1
+	local function link(currentLayer, layerDepth, currentBranch)
+		for key, _ in pairs(currentLayer.P.W) do
+			key.K = keys[keyIx]
+			keyIx = keyIx + 1
+		end
+		for key, _ in pairs(currentLayer.W) do
+			key.K = keys[keyIx]
+			keyIx = keyIx + 1
+		end
+		if layerDepth <= 0 then return end
+		table.sort(currentBranch, function (a, b)
+			return a.ix < b.ix
+		end)
+		for i = 1, currentBranch.len do
+			link(currentLayer.L[currentBranch[i].ix], layerDepth - 1, currentBranch[i])
+		end
+	end
+	link(self, depth, layers)
 end
