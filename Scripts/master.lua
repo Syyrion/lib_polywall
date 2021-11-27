@@ -673,7 +673,7 @@ function PolyWall:sWall(depth, ...)
 	local function sWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key, wall = {K = cw_create()}, currentLayer:new(...)
-			wall.__STALE = true
+			wall.__STALE, wall.P.__STALE = true, true
 			currentLayer.W[key] = wall
 			table.insert(wallKeys, key)
 		else
@@ -694,7 +694,7 @@ function PolyWall:nWall(depth, ...)
 	local function nWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key, wall = {K = cw_createNoCollision()}, currentLayer:new(...)
-			wall.__STALE = true
+			wall.__STALE, wall.P.__STALE = true, true
 			currentLayer.W[key] = wall
 			table.insert(wallKeys, key)
 		else
@@ -715,7 +715,7 @@ function PolyWall:dWall(depth, ...)
 	local function dWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key, wall = {K = cw_createDeadly()}, currentLayer:new(...)
-			wall.__STALE = true
+			wall.__STALE, wall.P.__STALE = true, true
 			currentLayer.W[key] = wall
 			table.insert(wallKeys, key)
 		else
@@ -840,16 +840,17 @@ function PolyWall:proportionalize(depth, ofs, ...)
 end
 
 -- Calculates all layer wall positions.
+-- The ... may seem useless, but it prevents a highly unpredictable bug from occuring.
 function PolyWall:advance(depth, mFrameTime)
 	depth = __VERIFYDEPTH(depth)
-	local function advance(currentLayer, layerDepth)
+	local function advance(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for _, wall in pairs(currentLayer.W) do
 				wall:posset(wall:posget() - mFrameTime * wall.speed:get() * wall.limit:dir())
 			end
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
-				advance(nextLayer, layerDepth - 1)
+				advance(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
@@ -943,15 +944,13 @@ end
 -- Layering within layers is unstable and will very likely change
 function PolyWall:sort(depth, descending)
 	depth = __VERIFYDEPTH(depth)
-	local keys, layers = {len = 0}, {len = 0}
+	local keys, layers = {}, {len = 0}
 	local function map(currentLayer, layerDepth, currentBranch)
 		for key, _ in pairs(currentLayer.W) do
 			table.insert(keys, key.K)
-			keys.len = keys.len + 1
 		end
 		for key, _ in pairs(currentLayer.P.W) do
 			table.insert(keys, key.K)
-			keys.len = keys.len + 1
 		end
 		if layerDepth <= 0 then return end
 		for nextLayerId, nextLayer in pairs(currentLayer.L) do
