@@ -1,3 +1,6 @@
+if __POLYWALL_MASTER_IMPORTED then return end
+__POLYWALL_MASTER_IMPORTED = true
+
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
 --[[
