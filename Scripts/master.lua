@@ -399,6 +399,23 @@ end
 local __MASTER = {}
 __MASTER.__index = __MASTER
 
+-- Deletes all walls
+function __MASTER:rrmWall(depth)
+	depth = __VERIFYDEPTH(depth)
+	local function rrmWall(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			for k, _ in pairs(currentLayer.W) do
+				currentLayer:rmWall(k)
+			end
+		else
+			for _, nextLayer in pairs(currentLayer.L) do
+				rrmWall(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	rrmWall(self, depth)
+end
+
 -- Sets all layer wall colors.
 function __MASTER:tint(depth, r, g, b, a)
 	depth = __VERIFYDEPTH(depth)
@@ -484,22 +501,6 @@ function MockPlayer:rmWall(key)
 	self.W[key] = nil
 end
 
-function MockPlayer:rrmWall(depth)
-	depth = __VERIFYDEPTH(depth)
-	local function rrmWall(currentLayer, layerDepth)
-		if layerDepth <= 0 then
-			for k, _ in pairs(currentLayer.W) do
-				currentLayer:rmWall(k)
-			end
-		else
-			for _, nextLayer in pairs(currentLayer.L) do
-				rrmWall(nextLayer, layerDepth - 1)
-			end
-		end
-	end
-	rrmWall(self, depth)
-end
-
 function MockPlayer:step(depth, mFocus, ...)
 	depth = __VERIFYDEPTH(depth)
 	local function step(currentLayer, layerDepth, ...)
@@ -568,30 +569,35 @@ PolyWall = setmetatable({
 }, __MASTER)
 PolyWall.__index = PolyWall
 
+local PolyWall_Metatable = {
+	__index = function (this, key)
+		return type(key) ~= 'number' and this.__PARENT[key] or nil
+	end
+}
+
+function PolyWall:createAttributes(th, sp, p, r, g, b, a, pol, cart, col, a0, a1, ofs, lim0, lim1)
+	local newInst = setmetatable({
+
+	}, PolyWall_Metatable)
+end
+
 function PolyWall:new(th, sp, p, r, g, b, a, pol, cart, col, a0, a1, ofs, lim0, lim1)
 	if self.__STALE then error(__E('wc', 'ila')(), 2) end
 	local newInst = setmetatable({
 		__PARENT = self,
 		thickness = self.thickness:new(th),
 		speed = self.speed:new(sp),
-		position = type(p) == 'number' and p or nil,
 		vertex = self.vertex:new(r, g, b, a, pol, cart, col),
 		angle = self.angle:new(a0, a1, ofs),
 		limit = self.limit:new(lim0, lim1),
 		L = setmetatable({}, __WEAKVALUES),
 		W = {}
-	}, {
-		__index = function (this, key)
-			return type(key) ~= 'number' and this.__PARENT[key] or nil
-		end
-	})
-	newInst.P = self.P:new(newInst)
+	}, PolyWall_Metatable)
+	newInst.position = newInst.limit.origin:new(p)
 	newInst.__index = newInst
+	newInst.P = self.P:new(newInst)
 	return newInst
 end
-
-function PolyWall:posset(p) self.position = type(p) == 'number' and p or nil end
-function PolyWall:posget() return rawget(self, 'position') or (self.speed:get() >= 0 and self.limit.origin:get() or self.limit.extent:get()) end
 
 -- Creates a new layer with positive integer key <n>.
 -- If <n> is nil or invalid, inserts new layer at end of list.
@@ -609,6 +615,7 @@ end
 function PolyWall:rmLayer(n, skipGc)
 	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg')(1, 'number'), 2)
 	if not self[n] then error(__E('lr', 'l', 'dne')(n), 2) end
+	self[n].P:rrmWall()
 	self[n]:rrmWall()
 	self[n]:rrmLayer()
 	self[n] = nil
@@ -641,23 +648,6 @@ function PolyWall:rmWall(key)
 	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
 	cw_destroy(key.K)
 	self.W[key] = nil
-end
-
--- Deletes all walls
-function PolyWall:rrmWall(depth)
-	depth = __VERIFYDEPTH(depth)
-	local function rrmWall(currentLayer, layerDepth)
-		if layerDepth <= 0 then
-			for k, _ in pairs(currentLayer.W) do
-				currentLayer:rmWall(k)
-			end
-		else
-			for _, nextLayer in pairs(currentLayer.L) do
-				rrmWall(nextLayer, layerDepth - 1)
-			end
-		end
-	end
-	rrmWall(self, depth)
 end
 
 -- Creates a wall of specified type
@@ -731,12 +721,12 @@ function PolyWall:dWall(depth, ...)
 	return unpack(wallKeys)
 end
 
-function PolyWall:pivotCap(depth)
+function PolyWall:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = __VERIFYDEPTH(depth)
 	local wallKeys = {}
 	local function pivotCap(currentLayer, layerDepth)
 		if layerDepth <= 0 then
-			local key = currentLayer:nWall(0, nil, 0, 0, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0)
+			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			currentLayer.W[key].thickness:define(getCapRadius)
 			table.insert(wallKeys, key)
 		else
@@ -749,12 +739,12 @@ function PolyWall:pivotCap(depth)
 	return unpack(wallKeys)
 end
 
-function PolyWall:pivotBorder(depth)
+function PolyWall:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = __VERIFYDEPTH(depth)
 	local wallKeys = {}
 	local function pivotBorder(currentLayer, layerDepth)
 		if layerDepth <= 0 then
-			local key = currentLayer:nWall(0, nil, 0, 0, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0)
+			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			currentLayer.W[key].thickness:define(getPivotRadius)
 			currentLayer.W[key].limit.extent:define(getCapRadius)
 			table.insert(wallKeys, key)
@@ -789,7 +779,9 @@ end
 -- Only affects layer indexes from [0, <shape>)
 -- All layers to be affected must exist
 function PolyWall:regularize(depth, shape, ofs)
+	depth = __VERIFYDEPTH(depth)
 	shape = verifyShape(shape)
+	ofs = type(ofs) == 'number' and ofs or 0
 	local arc = math.tau / shape
 	local cur = arc * -0.5
 	local angles = {cur}
@@ -800,7 +792,7 @@ function PolyWall:regularize(depth, shape, ofs)
 	local function regularize(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for i = 1, shape do
-				(currentLayer[i - 1] or error(__E('rg', 'l', 'dne', 'tmq')(i), depth + 3)).angle:set(angles[i], angles[i + 1], ofs)
+				(currentLayer[i - 1] or error(__E('rg', 'l', 'dne', 'tmq')(i - 1), depth + 3)).angle:set(angles[i], angles[i + 1], ofs)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
@@ -811,11 +803,39 @@ function PolyWall:regularize(depth, shape, ofs)
 	regularize(self, depth)
 end
 
+-- Distributes the offset angles of layers
+-- Only affects layers from [0, <shape>)
+-- All layers effected must exist
+function PolyWall:distribute(depth, shape, ofs)
+	depth = __VERIFYDEPTH(depth)
+	shape = verifyShape(shape)
+	ofs = type(ofs) == 'number' and ofs or 0
+	local arc = math.tau / shape
+	local angles = {[0] = ofs}
+	for i = 1, shape - 1 do
+		angles[i] = i * arc + ofs
+	end
+	local function distribute(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			for i = 0, shape - 1 do
+				(currentLayer[i] or error(__E('ds', 'l', 'dne', 'tmq')(i))).angle.offset:set(angles[i])
+			end
+		else
+			for _, nextLayer in pairs(currentLayer.L) do
+				distribute(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	distribute(self, depth)
+end
+
 -- Rearranges layers into a proportional shape.
 -- Only affects layer indexes from [0, <ratio length>)
 -- All layers to be affected must exist
 -- Returns the largest index of the new layers
 function PolyWall:proportionalize(depth, ofs, ...)
+	depth = __VERIFYDEPTH(depth)
+	ofs = type(ofs) == 'number' and ofs or 0
 	local t, ref = {...}, {0}
 	local l = #t
 	for i = 1, l do
@@ -830,7 +850,7 @@ function PolyWall:proportionalize(depth, ofs, ...)
 	local function proportionalize(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for i = 1, l do
-				(currentLayer[i - 1] or error(__E('po', 'l', 'dne', 'tmq')(i), depth + 3)).angle:set(angles[i], angles[i + 1], ofs)
+				(currentLayer[i - 1] or error(__E('po', 'l', 'dne', 'tmq')(i - 1), depth + 3)).angle:set(angles[i], angles[i + 1], ofs)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
@@ -849,7 +869,7 @@ function PolyWall:advance(depth, mFrameTime)
 	local function advance(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for _, wall in pairs(currentLayer.W) do
-				wall:posset(wall:posget() - mFrameTime * wall.speed:get() * wall.limit:dir())
+				wall.position:set(wall.position:get() - mFrameTime * wall.speed:get() * wall.limit:dir())
 			end
 		else
 			for _, nextLayer in pairs(currentLayer.L) do
@@ -871,7 +891,7 @@ function PolyWall:step(depth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle0, angle1 = wall.angle:result()
-				local pos, th, innerLim, outerLim = wall:posget(), wall.thickness:get(), wall.limit:order()
+				local pos, th, innerLim, outerLim = wall.position:get(), wall.thickness:get(), wall.limit:order()
 				if pos <= innerLim - math.abs(th) or pos >= outerLim + math.abs(th) then
 					currentLayer:rmWall(key)
 				else
