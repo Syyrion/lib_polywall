@@ -1,14 +1,4 @@
-if __POLYWALL_MASTER_IMPORTED then return end
-__POLYWALL_MASTER_IMPORTED = true
-
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
-
---[[
-	* METATABLE TOOLS
-]]
-
--- Metatable that sets values to be weak.
-local __WEAKVALUES = {__mode = 'v'}
 
 --[[
 	* ERROR MESSAGES
@@ -611,7 +601,6 @@ function PolyWallAttribute:new(...)
 end
 
 -- Creates a new layer with positive integer key <n>.
--- If <n> is nil or invalid, inserts new layer at end of list.
 function PolyWallAttribute:add(n, ...)
 	__VERIFYBRANCH(self)
 	n = type(n) == 'number' and math.floor(n) or error(__E('lc', 'arg')(1, 'number'), 2)
@@ -622,7 +611,6 @@ function PolyWallAttribute:add(n, ...)
 end
 
 -- Deletes a layer with integer key <n>.
--- If <skipGc> is true, then garbage collection is skipped.
 function PolyWallAttribute:rmLayer(n)
 	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg')(1, 'number'), 2)
 	if not self[n] then error(__E('lr', 'l', 'dne')(n), 2) end
