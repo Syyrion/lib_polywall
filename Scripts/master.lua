@@ -347,7 +347,7 @@ function DualLimit:swap()
 end
 function DualLimit:order()
 	local lh, lt = self.origin:get(), self.extent:get()
-	if lh >= lt then return lt, lh end
+	if lh > lt then return lt, lh end
 	return lh, lt
 end
 function DualLimit:dir() return self.origin:get() >= self.extent:get() and 1 or -1 end
@@ -964,7 +964,6 @@ function PolyWallAttribute:draw(depth, mFrameTime, r, g, b, a, ...)
 end
 
 -- Sorts wall CW handles such that lower numbered handles are moved to lower layers and higher numbered handles to higher layers
--- Sortings acts on all walls of all descendant layers of the origin layer
 -- Order can be reversed by setting <decending> parameter to true
 -- Enables wall layering based on layer IDs
 -- Only affects currently existing walls
