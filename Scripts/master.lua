@@ -1,6 +1,6 @@
 --[[
-	Advanced custom wall control for Open Hexagon
-	(https://github.com/vittorioromeo/SSVOpenHexagon)
+	Advanced custom wall control for Open Hexagon.
+	https://github.com/vittorioromeo/SSVOpenHexagon
 
 	Copyright (C) 2021 Ricky Cui
 
