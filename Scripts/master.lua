@@ -633,6 +633,20 @@ function PolyWallAttribute:add(n, ...)
 	self.P[n] = newLayer.P
 end
 
+function PolyWallAttribute:radd(depth, n, ...)
+	depth = __VERIFYDEPTH(depth)
+	local function rrad(currentLayer, layerDepth, ...)
+		if layerDepth <= 0 then
+			currentLayer:add(n, ...)
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				rrad(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	rrad(self, depth, ...)
+end
+
 -- Deletes a layer with integer key <n>.
 function PolyWallAttribute:rmLayer(n)
 	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg')(1, 'number'), 2)
