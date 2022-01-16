@@ -23,150 +23,11 @@
 
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
---[[
-	* ERROR MESSAGES
-]]
-
-local __E = setmetatable({
-	tm = 'Templating',
-	rg = 'Regularize',
-	po = 'Proportionalize',
-	lc = 'LayerCreation',
-	lr = 'LayerRemoval',
-	wc = 'WallCreation',
-	wr = 'WallRemoval',
-	pc = 'PlayerCreation',
-	pr = 'PlayerRemoval',
-	st = 'StaleBranch',
-
-	l = 'Layer ',
-	w = 'Custom wall ',
-	dne = '<%d> does not exist. ',
-	tmq = 'Did you forget to run the template function first? ',
-	ovr = 'Cannot overwrite already existing layer <%d>. ',
-	sum = 'Sum of all values in ratio must be greater than 0. ',
-	inv = 'Argument #%d is invalid. ',
-	arg = 'Argument #%d is not a %s. ',
-	key = 'Invalid or missing custom wall key ',
-	sta = 'Unable to perform operation on stale branch. ',
-	cus = '%s'
-}, {
-	__call = function (this, err, ...)
-		local t, msg = {...}, string.format('[%sError] ', this[err])
-		for i = 1, #t do
-			msg = msg .. this[t[i]]
-		end
-		return setmetatable({
-			msg = msg
-		}, {
-			__call = function (this, ...)
-				return string.format(this.msg, ...)
-			end
-		})
-	end
-})
-
---[[
-	* BASE DISCRETE CLASSES
-]]
-
---[[
-	* Discrete class
-	Contains functions that all discrete classes use
-]]
-local Discrete = {}
-Discrete.__index = Discrete
-function Discrete:new(init)
-	local newInst = setmetatable({}, self)
-	newInst.__index = newInst
-	newInst:set(init)
-	return newInst
-end
--- Sets a value. If verification fails, the value is removed
-function Discrete:set(val) self.val = self.verify(val) and val or nil end
-function Discrete:get() return self.val end
--- Defines a value's get function
-function Discrete:define(fn) self.get = type(fn) == "function" and fn or nil end
--- Gets a value without searching for a default value
-function Discrete:rawget() return rawget(self, 'val') end
--- Sets a value to its default
-function Discrete:freeze()
-	self.val = nil
-	self.val = self:get()
-end
-
---[[
-	* Discrete Numeric class
-	-- Handles a single numerical parameter value
-]]
-local DiscreteNumeric = setmetatable({}, Discrete)
-DiscreteNumeric.__index = DiscreteNumeric
-function DiscreteNumeric.verify(val) return type(val) == 'number' end
-
---[[
-	* Discrete Boolean class
-	-- Handles a single boolean parameter value with default value false
-]]
-local DiscreteBoolean = setmetatable({val = false}, Discrete)
-DiscreteBoolean.__index = DiscreteBoolean
-function DiscreteBoolean.verify(val) return type(val) == 'boolean' end
-
-
---[[
-	* TRANSFORMATION CLASSES
-]]
-
---[[
-	* Discrete Transformation Class
-	Handles a discrete transformation
-]]
-local DiscreteTransform = setmetatable({}, Discrete)
-DiscreteTransform.__index = DiscreteTransform
-function DiscreteTransform.verify(val) return type(val) == 'function' end
-function DiscreteTransform:run(...) return self:get()(...) end
-
---[[
-	* Discrete Position Transformation Class
-	Handles a single 2 arguement position transformation function
-]]
-local DiscretePositionTransform = setmetatable({val = function (a, b) return a, b end}, DiscreteTransform)
-DiscretePositionTransform.__index = DiscretePositionTransform
-
---[[
-	* Color Transformation Class
-	Handles a single 4 arguement col transformation function
-]]
-local DiscreteColorTransform = setmetatable({val = function (r, g, b, a) return r, g, b, a end}, DiscreteTransform)
-DiscreteColorTransform.__index = DiscreteColorTransform
-
-
-
---[[
-	* COLOR CLASSES
-]]
-
---[[
-	* Color Channel Classes
-	Each handles a single channel
-]]
-local RChannel = setmetatable({}, DiscreteNumeric)
-RChannel.__index = RChannel
-function RChannel:get() return self.val or ({s_getMainColor()})[1] end
-local GChannel = setmetatable({}, DiscreteNumeric)
-GChannel.__index = GChannel
-function GChannel:get() return self.val or ({s_getMainColor()})[2] end
-local BChannel = setmetatable({}, DiscreteNumeric)
-BChannel.__index = BChannel
-function BChannel:get() return self.val or ({s_getMainColor()})[3] end
-local AChannel = setmetatable({}, DiscreteNumeric)
-AChannel.__index = AChannel
-function AChannel:get() return self.val or ({s_getMainColor()})[4] end
-
 Channel = {
-	r = RChannel,
-	g = GChannel,
-	b = BChannel,
-	a = AChannel,
+	r = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[1] end, 'number'),
+	g = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[2] end, 'number'),
+	b = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[3] end, 'number'),
+	a = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[4] end, 'number')
 }
 Channel.__index = Channel
 function Channel:new(r, g, b, a)
@@ -191,7 +52,6 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 
 
 
-
 --[[
 	* VERTEX CLASSES
 ]]
@@ -202,9 +62,9 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 ]]
 local DiscreteVertex = {
 	ch = Channel,
-	pol = DiscretePositionTransform,
-	cart = DiscretePositionTransform,
-	col = DiscreteColorTransform
+	pol = Discrete:new(function (a, b) return a, b end, nil, 'function'),
+	cart = Discrete:new(function (a, b) return a, b end, nil, 'function'),
+	col = Discrete:new(function (r, g, b, a) return r, g, b, a end, nil, 'function')
 }
 DiscreteVertex.__index = DiscreteVertex
 function DiscreteVertex:new(r, g, b, a, pol, cart, col)
@@ -219,7 +79,7 @@ function DiscreteVertex:new(r, g, b, a, pol, cart, col)
 end
 function DiscreteVertex:result(...)
 	local r, g, b, a = self.ch:get()
-	return self.col:run(r, g, b, a, ...)
+	return self.col:get()(r, g, b, a, ...)
 end
 
 --[[
@@ -296,9 +156,9 @@ function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 	Handles two angles and an offset
 ]]
 local DualAngle = {
-	origin = DiscreteNumeric:new(0),
-	extent = DiscreteNumeric:new(0),
-	offset = DiscreteNumeric:new(0)
+	origin = Discrete:new(0, nil, 'number'),
+	extent = Discrete:new(0, nil, 'number'),
+	offset = Discrete:new(0, nil, 'number')
 }
 DualAngle.__index = DualAngle
 function DualAngle:new(a0, a1, ofs)
@@ -321,27 +181,12 @@ function DualAngle:result()
 end
 
 --[[
-	* Limit head class
-	Contains default starting limit
-]]
-local LimitOrigin = setmetatable({val = 1600}, DiscreteNumeric)
-LimitOrigin.__index = LimitOrigin
-
---[[
-	* Limit tail parameter class
-	Contains default ending limit
-]]
-local LimitExtent = setmetatable({}, DiscreteNumeric)
-LimitExtent.__index = LimitExtent
-function LimitExtent:get() return self.val or getPivotRadius() end
-
---[[
 	* Dual limit parameter class
 	Handles origin and extent limits
 ]]
 local DualLimit = {
-	origin = LimitOrigin,
-	extent = LimitExtent
+	origin = Discrete:new(1600, nil, 'number'),
+	extent = Discrete:new(nil, function (self) return self.val or getPivotRadius() end, 'number')
 }
 DualLimit.__index = DualLimit
 function DualLimit:new(lim0, lim1)
@@ -368,40 +213,14 @@ function DualLimit:order()
 end
 function DualLimit:dir() return self.origin:get() >= self.extent:get() and 1 or -1 end
 
---[[
-	* Thickness parameter class
-	Contains default thickness value
-]]
-local Thickness = setmetatable({val = THICKNESS}, DiscreteNumeric)
-Thickness.__index = Thickness
+
 
 --[[
-	* Speed parameter class
-	Contains default speed calculation function
+	* LAYER CLASSES
 ]]
-local Speed = setmetatable({}, DiscreteNumeric)
-Speed.__index = Speed
-function Speed:get() return self.val or getWallSpeedInUnitsPerFrame() end
 
-local MockPlayerAngle = setmetatable({}, DiscreteNumeric)
-MockPlayerAngle.__index = MockPlayerAngle
-function MockPlayerAngle:get() return self.val or u_getPlayerAngle() end
-local MockPlayerDistance = setmetatable({}, DiscreteNumeric)
-MockPlayerDistance.__index = MockPlayerDistance
-function MockPlayerDistance:get() return self.val or getDistanceBetweenCenterAndPlayerTip() end
-local MockPlayerHeight = setmetatable({}, DiscreteNumeric)
-MockPlayerHeight.__index = MockPlayerHeight
-function MockPlayerHeight:get() return self.val or getPlayerHeight() end
-local MockPlayerWidth = setmetatable({}, DiscreteNumeric)
-MockPlayerWidth.__index = MockPlayerWidth
-function MockPlayerWidth:get() return self.val or getPlayerBaseWidth() end
-
-local __VERIFYDEPTH = function (depth)
+local __VERIFY_DEPTH = function (depth)
 	return type(depth) == 'number' and math.floor(depth) or 0
-end
-
-local __VERIFYBRANCH = function (branch)
-	return branch.__STALE and error(__E('st', 'sta')(), 3) or nil
 end
 
 --[[
@@ -412,8 +231,7 @@ __MASTER.__index = __MASTER
 
 -- Deletes all walls
 function __MASTER:rrmWall(depth)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function rrmWall(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for k, _ in pairs(currentLayer.W) do
@@ -430,8 +248,7 @@ end
 
 -- Sets all layer wall colors.
 function __MASTER:tint(depth, r, g, b, a)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function tint(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for _, wall in pairs(currentLayer.W) do
@@ -456,12 +273,12 @@ end
 	* MockPlayer class
 ]]
 local MockPlayerAttribute = setmetatable({
-	angle = MockPlayerAngle,
-	offset = DiscreteNumeric:new(0),
-	distance = MockPlayerDistance,
-	height = MockPlayerHeight,
-	width = MockPlayerWidth,
-	accurate = DiscreteBoolean
+	angle = Discrete:new(nil, function (self) return self.val or u_getPlayerAngle() end, 'number'),
+	offset = Discrete:new(0, nil, 'number'),
+	distance = Discrete:new(nil, function (self) return self.val or getDistanceBetweenCenterAndPlayerTip() end, 'number'),
+	height = Discrete:new(nil, function (self) return self.val or getPlayerHeight() end, 'number'),
+	width = Discrete:new(nil, function (self) return self.val or getPlayerBaseWidth() end, 'number'),
+	accurate = Discrete:new(false, nil, 'boolean')
 }, __MASTER)
 MockPlayerAttribute.__index = MockPlayerAttribute
 
@@ -469,8 +286,7 @@ MockPlayer = setmetatable({}, MockPlayerAttribute)
 MockPlayerAttribute.L = MockPlayer
 
 function MockPlayerAttribute:construct(parent, a0, ofs, d, h, w, r, g, b, a, pol, cart, col, acc)
-	__VERIFYBRANCH(self)
-	local newInst = setmetatable({
+	return {
 		angle = self.angle:new(a0),
 		offset = self.offset:new(ofs),
 		distance = self.distance:new(d),
@@ -478,13 +294,12 @@ function MockPlayerAttribute:construct(parent, a0, ofs, d, h, w, r, g, b, a, pol
 		width = self.width:new(w),
 		vertex = parent.vertex:new(r, g, b, a, pol, cart, col),
 		accurate = self.accurate:new(acc)
-	}, getmetatable(self))
-	newInst.__index = newInst
-	return newInst
+	}
 end
 
 function MockPlayerAttribute:new(...)
-	local newInst = self:construct(...)
+	local newInst = setmetatable(self:construct(...), getmetatable(self))
+	newInst.__index = newInst
 	local newLayer = setmetatable({}, newInst)
 	newInst.L = newLayer
 	newInst.W = {}
@@ -494,53 +309,46 @@ end
 -- Creates a MockPlayer
 -- Returns a tuple of all created wall key objects
 function MockPlayerAttribute:create(depth, ...)
-	depth = __VERIFYDEPTH(depth)
-	local playerKeys = {}
+	depth = __VERIFY_DEPTH(depth)
 	local function create(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key, player = {K = cw_createNoCollision()}, currentLayer:construct(currentLayer, ...)
-			player.__STALE = true
-			currentLayer.W[key] = player
-			table.insert(playerKeys, key)
+			local key = {K = cw_createNoCollision()}
+			currentLayer.W[key] = currentLayer:construct(currentLayer, ...)
+			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				create(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
-	create(self, depth, ...)
-	return unpack(playerKeys)
+	return create(self, depth, ...)
 end
 
 function MockPlayerAttribute:rmWall(key)
-	__VERIFYBRANCH(self)
-	if type(key) ~= 'table' then error(__E('pr', 'arg')(1, 'table'), 2) end
-	if type(key.K) ~= 'number' then error(__E('pr', 'key')(), 2) end
-	if not self.W[key] then error(__E('pr', 'w', 'dne')(key.K), 2) end
+	if type(key) ~= 'table' then errorf(2, 'PlayerRemoval', 'Argument #1 is not a table.') end
+	if type(key.K) ~= 'number' then errorf(2, 'PlayerRemoval', 'Invalid or missing custom wall key.') end
+	if not self.W[key] then errorf(2, 'PlayerRemoval', 'Custom wall <%d> does not exist.', key.K) end
 	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
 	cw_destroy(key.K)
 	self.W[key] = nil
 end
 
 function MockPlayerAttribute:step(depth, mFocus, ...)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function step(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
 				local baseRadius, accurate = distance - wall.height:get(), wall.accurate:get()
 				local sideRadius = accurate and (halfWidth * halfWidth + baseRadius * baseRadius) ^ 0.5 or baseRadius
-				local sideAngle = (accurate and math.atan2 or function (a, b)
-					return a / b
-				end)(halfWidth, baseRadius) + (baseRadius < 0 and math.pi or 0)
+				local sideAngle = (accurate and math.atan2 or function (a, b) return a / b end)(halfWidth, baseRadius) + (baseRadius < 0 and math.pi or 0)
 
-				local r0, a0 = wall.vertex[0].pol:run(distance, angle, ...)
-				local r1, a1 = wall.vertex[1].pol:run(sideRadius, angle + sideAngle, ...)
-				local r2, a2 = wall.vertex[2].pol:run(sideRadius, angle - sideAngle, ...)
-				local x0, y0 = wall.vertex[0].cart:run(r0 * math.cos(a0), r0 * math.sin(a0), ...)
-				local x1, y1 = wall.vertex[1].cart:run(r1 * math.cos(a1), r1 * math.sin(a1), ...)
-				local x2, y2 = wall.vertex[2].cart:run(r2 * math.cos(a2), r2 * math.sin(a2), ...)
+				local r0, a0 = wall.vertex[0].pol:get()(distance, angle, ...)
+				local r1, a1 = wall.vertex[1].pol:get()(sideRadius, angle + sideAngle, ...)
+				local r2, a2 = wall.vertex[2].pol:get()(sideRadius, angle - sideAngle, ...)
+				local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
+				local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
+				local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
 				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x2, y2)
 			end
 		else
@@ -553,8 +361,7 @@ function MockPlayerAttribute:step(depth, mFocus, ...)
 end
 
 function MockPlayerAttribute:fill(depth, ...)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -581,8 +388,8 @@ end
 	* PolyWall Class
 ]]
 local PolyWallAttribute = setmetatable({
-	thickness = Thickness,
-	speed = Speed,
+	thickness = Discrete:new(THICKNESS, nil, 'number'),
+	speed = Discrete:new(nil, function (self) return self.val or getWallSpeedInUnitsPerFrame() end, 'number'),
 	vertex = QuadVertex,
 	angle = DualAngle,
 	limit = DualLimit,
@@ -594,21 +401,20 @@ PolyWall = setmetatable({}, PolyWallAttribute)
 PolyWallAttribute.L = PolyWall
 
 function PolyWallAttribute:construct(th, sp, p, r, g, b, a, pol, cart, col, a0, a1, ofs, lim0, lim1)
-	__VERIFYBRANCH(self)
-	local newInst = setmetatable({
+	local newInst = {
 		thickness = self.thickness:new(th),
 		speed = self.speed:new(sp),
 		vertex = self.vertex:new(r, g, b, a, pol, cart, col),
 		angle = self.angle:new(a0, a1, ofs),
 		limit = self.limit:new(lim0, lim1),
-	}, getmetatable(self))
+	}
 	newInst.position = newInst.limit.origin:new(p)
-	newInst.__index = newInst
 	return newInst
 end
 
 function PolyWallAttribute:new(...)
-	local newInst = self:construct(...)
+	local newInst = setmetatable(self:construct(...), getmetatable(self))
+	newInst.__index = newInst
 	local newLayer = setmetatable({}, newInst)
 	newInst.L = newLayer
 	newInst.W = {}
@@ -618,16 +424,15 @@ end
 
 -- Creates a new layer with positive integer key <n>.
 function PolyWallAttribute:add(n, ...)
-	__VERIFYBRANCH(self)
-	n = type(n) == 'number' and math.floor(n) or error(__E('lc', 'arg')(1, 'number'), 2)
-	if self[n] then error(__E('lc', 'ovr')(n), 2) end
+	n = type(n) == 'number' and math.floor(n) or errorf(2, 'LayerCreation', 'Argument #1 is not a number.')
+	if self[n] then errorf(2, 'LayerCreation', 'Cannot overwrite already existing layer <%d>', n) end
 	local newLayer = self:new(...)
 	self[n] = newLayer
 	self.P[n] = newLayer.P
 end
 
 function PolyWallAttribute:radd(depth, n, ...)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function rrad(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			currentLayer:add(n, ...)
@@ -642,8 +447,8 @@ end
 
 -- Deletes a layer with integer key <n>.
 function PolyWallAttribute:rmLayer(n)
-	n = type(n) == 'number' and math.floor(n) or error(__E('lr', 'arg')(1, 'number'), 2)
-	if not self[n] then error(__E('lr', 'l', 'dne')(n), 2) end
+	n = type(n) == 'number' and math.floor(n) or errorf(2, 'LayerRemoval', 'Argument #1 is not a number.')
+	if not self[n] then errorf(2, 'LayerRemoval', 'Layer <%d> does not exist.', n) end
 	self[n].P:rrmWall()
 	self[n]:rrmWall()
 	self[n]:rrmLayer()
@@ -652,7 +457,7 @@ end
 
 -- Deletes all layers
 function PolyWallAttribute:rrmLayer(depth)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function rrmLayer(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for k, _ in pairs(currentLayer) do
@@ -669,10 +474,9 @@ end
 
 -- Deletes a layer with cw key <n>.
 function PolyWallAttribute:rmWall(key)
-	__VERIFYBRANCH(self)
-	if type(key) ~= 'table' then error(__E('pr', 'arg')(1, 'table'), 2) end
-	if type(key.K) ~= 'number' then error(__E('pr', 'key')(), 2) end
-	if not self.W[key] then error(__E('wr', 'w', 'dne')(key.K), 2) end
+	if type(key) ~= 'table' then errorf(2, 'WallRemoval', 'Argument #1 is not a table.') end
+	if type(key.K) ~= 'number' then errorf(2, 'WallRemoval', 'Invalid or missing custom wall key.') end
+	if not self.W[key] then errorf(2, 'WallRemoval', 'Custom wall <%d> does not exist.', key.K) end
 	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
 	cw_destroy(key.K)
 	self.W[key] = nil
@@ -682,19 +486,18 @@ end
 -- Type can be 's', 'n' or 'd'
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:wall(depth, t, ...)
-	if type(t) ~= 'string' then error(__E('wc', 'arg')(1, 'string'), 2) end
-	return (self[t .. 'Wall'] or error(__E('wc', 'inv')(1), 2))(depth, ...)
+	if type(t) ~= 'string' then errorf(2, 'WallCreation', 'Argument #2 is not a string.') end
+	return (self[t .. 'Wall'] or errorf(2, 'WallCreation', 'Argument #2 is not equivalent to "s", "n", or "d".'))(depth, ...)
 end
 
 -- Creates a standard wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:sWall(depth, ...)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function sWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key, wall = {K = cw_create()}, currentLayer:construct(...)
-			wall.__STALE = true
-			currentLayer.W[key] = wall
+			local key = {K = cw_create()}
+			currentLayer.W[key] = currentLayer:construct(...)
 			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -702,18 +505,17 @@ function PolyWallAttribute:sWall(depth, ...)
 			end
 		end
 	end
-	sWall(self, depth, ...)
+	return sWall(self, depth, ...)
 end
 
 -- Creates a non-solid wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:nWall(depth, ...)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function nWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key, wall = {K = cw_createNoCollision()}, currentLayer:construct(...)
-			wall.__STALE = true
-			currentLayer.W[key] = wall
+			local key = {K = cw_createNoCollision()}
+			currentLayer.W[key] = currentLayer:construct(...)
 			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -721,18 +523,17 @@ function PolyWallAttribute:nWall(depth, ...)
 			end
 		end
 	end
-	nWall(self, depth, ...)
+	return nWall(self, depth, ...)
 end
 
 -- Creates a deadly wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:dWall(depth, ...)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function dWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key, wall = {K = cw_createDeadly()}, currentLayer:construct(...)
-			wall.__STALE = true
-			currentLayer.W[key] = wall
+			local key = {K = cw_createDeadly()}
+			currentLayer.W[key] = currentLayer:construct(...)
 			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -740,11 +541,11 @@ function PolyWallAttribute:dWall(depth, ...)
 			end
 		end
 	end
-	dWall(self, depth, ...)
+	return dWall(self, depth, ...)
 end
 
 function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function pivotCap(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
@@ -756,11 +557,11 @@ function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, o
 			end
 		end
 	end
-	pivotCap(self, depth)
+	return pivotCap(self, depth)
 end
 
 function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function pivotBorder(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
@@ -773,12 +574,12 @@ function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1
 			end
 		end
 	end
-	pivotBorder(self, depth)
+	return pivotBorder(self, depth)
 end
 
 -- Returns true if any of the checked layers has a wall.
 function PolyWallAttribute:hasWalls(depth)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function hasWalls(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			assert(not next(currentLayer.W))
@@ -794,8 +595,8 @@ end
 
 -- Creates <n> layers ranging from [0, <n>)
 function PolyWallAttribute:template(depth, n, ...)
-	depth = __VERIFYDEPTH(depth)
-	n = type(n) == 'number' and math.floor(n) - 1 or error(__E('tm', 'arg')(2, 'number'), 2)
+	depth = __VERIFY_DEPTH(depth)
+	n = type(n) == 'number' and math.floor(n) - 1 or errorf(2, 'Template', 'Argument #2 is not a number.')
 	local function template(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			currentLayer:rrmLayer()
@@ -813,8 +614,7 @@ end
 -- Only affects layer indexes from [0, <shape>)
 -- All layers to be affected must exist
 function PolyWallAttribute:regularize(depth, shape, ofs)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	shape = verifyShape(shape)
 	ofs = type(ofs) == 'number' and ofs or 0
 	local arc = math.tau / shape
@@ -827,7 +627,7 @@ function PolyWallAttribute:regularize(depth, shape, ofs)
 	local function regularize(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for i = 1, shape do
-				(currentLayer[i - 1] or error(__E('rg', 'l', 'dne', 'tmq')(i - 1), depth + 3)).angle:set(angles[i], angles[i + 1], ofs)
+				(currentLayer[i - 1] or errorf(depth + 3, 'Regularize', 'Layer <%d> does not exist. Did you forget to run the template function first?', i - 1)).angle:set(angles[i], angles[i + 1], ofs)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -842,8 +642,7 @@ end
 -- Only affects layers from [0, <shape>)
 -- All layers effected must exist
 function PolyWallAttribute:distribute(depth, shape, ofs)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	shape = verifyShape(shape)
 	ofs = type(ofs) == 'number' and ofs or 0
 	local arc = math.tau / shape
@@ -854,7 +653,7 @@ function PolyWallAttribute:distribute(depth, shape, ofs)
 	local function distribute(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for i = 0, shape - 1 do
-				(currentLayer[i] or error(__E('ds', 'l', 'dne', 'tmq')(i))).angle.offset:set(angles[i])
+				(currentLayer[i] or errorf(depth + 3, 'Distribute', 'Layer <%d> does not exist. Did you forget to run the template function first?', i)).angle.offset:set(angles[i])
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -870,16 +669,15 @@ end
 -- All layers to be affected must exist
 -- Returns the largest index of the new layers
 function PolyWallAttribute:proportionalize(depth, ofs, ...)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	ofs = type(ofs) == 'number' and ofs or 0
 	local t, ref = {...}, {0}
 	local l = #t
 	for i = 1, l do
-		if type(t[i]) ~= 'number' then error(__E('po', 'arg')(1 + i, 'number'), 2) end
+		if type(t[i]) ~= 'number' then errorf(2, 'Proportionalize', 'Argument #%d is not a number.', i + 1) end
 		ref[i + 1] = ref[i] + t[i]
 	end
-	if ref[l + 1] <= 0 then error(__E('po', 'sum')(), 2) end
+	if ref[l + 1] <= 0 then errorf(2, 'Proportionalize', 'Ths sum of all values in the ratio must be greater than 0.') end
 	local angles = {0}
 	for i = 1, l do
 		table.insert(angles, mapValue(ref[i + 1], 0, ref[l + 1], 0, math.tau))
@@ -887,7 +685,7 @@ function PolyWallAttribute:proportionalize(depth, ofs, ...)
 	local function proportionalize(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for i = 1, l do
-				(currentLayer[i - 1] or error(__E('po', 'l', 'dne', 'tmq')(i - 1), depth + 3)).angle:set(angles[i], angles[i + 1], ofs)
+				(currentLayer[i - 1] or errorf(depth + 3, 'Proportionalize', 'Layer <%d> does not exist. Did you forget to run the template function first?', i - 1)).angle:set(angles[i], angles[i + 1], ofs)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -902,8 +700,7 @@ end
 -- Calculates all layer wall positions.
 -- The ... may seem useless, but it prevents a highly unpredictable bug from occuring.
 function PolyWallAttribute:advance(depth, mFrameTime)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function advance(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for _, wall in pairs(currentLayer.W) do
@@ -924,8 +721,7 @@ end
 -- The <tf> parameter is used for passing down transformation functions while recursing
 -- Note that all polar and cartesian transformation parameters are unioned.
 function PolyWallAttribute:step(depth, ...)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function step(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -935,14 +731,14 @@ function PolyWallAttribute:step(depth, ...)
 					currentLayer:rmWall(key)
 				else
 					local innerRad, outerRad = clamp(pos, innerLim, outerLim), clamp(pos + th * wall.limit:dir(), innerLim, outerLim)
-					local r0, a0 = wall.vertex[0].pol:run(innerRad, angle0, ...)
-					local r1, a1 = wall.vertex[1].pol:run(innerRad, angle1, ...)
-					local r2, a2 = wall.vertex[2].pol:run(outerRad, angle1, ...)
-					local r3, a3 = wall.vertex[3].pol:run(outerRad, angle0, ...)
-					local x0, y0 = wall.vertex[0].cart:run(r0 * math.cos(a0), r0 * math.sin(a0), ...)
-					local x1, y1 = wall.vertex[1].cart:run(r1 * math.cos(a1), r1 * math.sin(a1), ...)
-					local x2, y2 = wall.vertex[2].cart:run(r2 * math.cos(a2), r2 * math.sin(a2), ...)
-					local x3, y3 = wall.vertex[3].cart:run(r3 * math.cos(a3), r3 * math.sin(a3), ...)
+					local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
+					local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
+					local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
+					local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0, ...)
+					local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
+					local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
+					local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
+					local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3), ...)
 					cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
 				end
 			end
@@ -957,8 +753,7 @@ end
 
 -- Updates all layer wall colors.
 function PolyWallAttribute:fill(depth, ...)
-	__VERIFYBRANCH(self)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -1005,7 +800,7 @@ end
 -- Only affects currently existing walls
 -- Layering within layers is unstable and will very likely change
 function PolyWallAttribute:sort(depth, descending)
-	depth = __VERIFYDEPTH(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local keys, layers = {}, {len = 0}
 	local function map(currentLayer, layerDepth, currentBranch)
 		for key, _ in pairs(currentLayer.W) do
