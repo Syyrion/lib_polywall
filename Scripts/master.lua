@@ -104,13 +104,6 @@ DiscreteNumeric.__index = DiscreteNumeric
 function DiscreteNumeric.verify(val) return type(val) == 'number' end
 
 --[[
-	* Default Discrete Numeric class
-	-- Adds a default value of 0 to DiscreteNumeric
-]]
-local DefaultDiscreteNumeric = setmetatable({val = 0}, DiscreteNumeric)
-DefaultDiscreteNumeric.__index = DefaultDiscreteNumeric
-
---[[
 	* Discrete Boolean class
 	-- Handles a single boolean parameter value with default value false
 ]]
@@ -303,9 +296,9 @@ function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 	Handles two angles and an offset
 ]]
 local DualAngle = {
-	origin = DefaultDiscreteNumeric,
-	extent = DefaultDiscreteNumeric,
-	offset = DefaultDiscreteNumeric
+	origin = DiscreteNumeric:new(0),
+	extent = DiscreteNumeric:new(0),
+	offset = DiscreteNumeric:new(0)
 }
 DualAngle.__index = DualAngle
 function DualAngle:new(a0, a1, ofs)
@@ -464,7 +457,7 @@ end
 ]]
 local MockPlayerAttribute = setmetatable({
 	angle = MockPlayerAngle,
-	offset = DefaultDiscreteNumeric,
+	offset = DiscreteNumeric:new(0),
 	distance = MockPlayerDistance,
 	height = MockPlayerHeight,
 	width = MockPlayerWidth,
@@ -697,13 +690,12 @@ end
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:sWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
-	local wallKeys = {}
 	local function sWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key, wall = {K = cw_create()}, currentLayer:construct(...)
 			wall.__STALE = true
 			currentLayer.W[key] = wall
-			table.insert(wallKeys, key)
+			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				sWall(nextLayer, layerDepth - 1, ...)
@@ -711,20 +703,18 @@ function PolyWallAttribute:sWall(depth, ...)
 		end
 	end
 	sWall(self, depth, ...)
-	return unpack(wallKeys)
 end
 
 -- Creates a non-solid wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:nWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
-	local wallKeys = {}
 	local function nWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key, wall = {K = cw_createNoCollision()}, currentLayer:construct(...)
 			wall.__STALE = true
 			currentLayer.W[key] = wall
-			table.insert(wallKeys, key)
+			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				nWall(nextLayer, layerDepth - 1, ...)
@@ -732,20 +722,18 @@ function PolyWallAttribute:nWall(depth, ...)
 		end
 	end
 	nWall(self, depth, ...)
-	return unpack(wallKeys)
 end
 
 -- Creates a deadly wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:dWall(depth, ...)
 	depth = __VERIFYDEPTH(depth)
-	local wallKeys = {}
 	local function dWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key, wall = {K = cw_createDeadly()}, currentLayer:construct(...)
 			wall.__STALE = true
 			currentLayer.W[key] = wall
-			table.insert(wallKeys, key)
+			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				dWall(nextLayer, layerDepth - 1, ...)
@@ -753,17 +741,15 @@ function PolyWallAttribute:dWall(depth, ...)
 		end
 	end
 	dWall(self, depth, ...)
-	return unpack(wallKeys)
 end
 
 function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = __VERIFYDEPTH(depth)
-	local wallKeys = {}
 	local function pivotCap(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			currentLayer.W[key].thickness:define(getCapRadius)
-			table.insert(wallKeys, key)
+			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				pivotCap(nextLayer, layerDepth - 1)
@@ -771,18 +757,16 @@ function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, o
 		end
 	end
 	pivotCap(self, depth)
-	return unpack(wallKeys)
 end
 
 function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = __VERIFYDEPTH(depth)
-	local wallKeys = {}
 	local function pivotBorder(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			currentLayer.W[key].thickness:define(getPivotRadius)
 			currentLayer.W[key].limit.extent:define(getCapRadius)
-			table.insert(wallKeys, key)
+			return key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				pivotBorder(nextLayer, layerDepth - 1)
@@ -790,7 +774,22 @@ function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1
 		end
 	end
 	pivotBorder(self, depth)
-	return unpack(wallKeys)
+end
+
+-- Returns true if any of the checked layers has a wall.
+function PolyWallAttribute:hasWalls(depth)
+	depth = __VERIFYDEPTH(depth)
+	local function hasWalls(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			assert(not next(currentLayer.W))
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				pivotBorder(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	local out = pcall(hasWalls, self, depth)
+	return out
 end
 
 -- Creates <n> layers ranging from [0, <n>)
