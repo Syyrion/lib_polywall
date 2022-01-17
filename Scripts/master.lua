@@ -585,12 +585,11 @@ function PolyWallAttribute:hasWalls(depth)
 			assert(not next(currentLayer.W))
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				pivotBorder(nextLayer, layerDepth - 1)
+				hasWalls(nextLayer, layerDepth - 1)
 			end
 		end
 	end
-	local out = pcall(hasWalls, self, depth)
-	return out
+	return not pcall(hasWalls, self, depth)
 end
 
 -- Creates <n> layers ranging from [0, <n>)
