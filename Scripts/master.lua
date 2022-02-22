@@ -62,9 +62,9 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 ]]
 local DiscreteVertex = {
 	ch = Channel,
-	pol = Discrete:new(function (a, b) return a, b end, nil, 'function'),
-	cart = Discrete:new(function (a, b) return a, b end, nil, 'function'),
-	col = Discrete:new(function (r, g, b, a) return r, g, b, a end, nil, 'function')
+	pol = Discrete:new(__NOP, nil, 'function'),
+	cart = Discrete:new(__NOP, nil, 'function'),
+	col = Discrete:new(__NOP, nil, 'function')
 }
 DiscreteVertex.__index = DiscreteVertex
 function DiscreteVertex:new(r, g, b, a, pol, cart, col)
@@ -406,7 +406,7 @@ function PolyWallAttribute:construct(th, sp, p, r, g, b, a, pol, cart, col, a0, 
 		speed = self.speed:new(sp),
 		vertex = self.vertex:new(r, g, b, a, pol, cart, col),
 		angle = self.angle:new(a0, a1, ofs),
-		limit = self.limit:new(lim0, lim1),
+		limit = self.limit:new(lim0, lim1)
 	}
 	newInst.position = newInst.limit.origin:new(p)
 	return newInst
@@ -429,20 +429,23 @@ function PolyWallAttribute:add(n, ...)
 	local newLayer = self:new(...)
 	self[n] = newLayer
 	self.P[n] = newLayer.P
+	return newLayer
 end
 
 function PolyWallAttribute:radd(depth, n, ...)
 	depth = __VERIFY_DEPTH(depth)
+	local layerTable = {}
 	local function rrad(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			currentLayer:add(n, ...)
+			table.insert(layerTable, currentLayer:add(n, ...))
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				rrad(nextLayer, layerDepth - 1)
+				rrad(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
 	rrad(self, depth, ...)
+	return layerTable
 end
 
 -- Deletes a layer with integer key <n>.
