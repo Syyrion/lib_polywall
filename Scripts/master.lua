@@ -60,12 +60,13 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 	* Discrete Vertex Class
 	Handles a single vertex's col and transformations
 ]]
+
 local DiscreteVertex = {
 	ch = Channel,
-	pol = Discrete:new(__NOP, nil, 'function'),
-	cart = Discrete:new(__NOP, nil, 'function'),
-	col = Discrete:new(__NOP, nil, 'function')
+	pol = Discrete:new(function (a, b) return a, b end, nil, 'function'),
+	col = Discrete:new(function (a, b, c, d) return a, b, c, d end, nil, 'function')
 }
+DiscreteVertex.cart = DiscreteVertex.pol
 DiscreteVertex.__index = DiscreteVertex
 function DiscreteVertex:new(r, g, b, a, pol, cart, col)
 	local newInst = setmetatable({
@@ -156,10 +157,10 @@ function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 	Handles two angles and an offset
 ]]
 local DualAngle = {
-	origin = Discrete:new(0, nil, 'number'),
-	extent = Discrete:new(0, nil, 'number'),
-	offset = Discrete:new(0, nil, 'number')
+	origin = Discrete:new(0, nil, 'number')
 }
+DualAngle.extent = DualAngle.origin
+DualAngle.offset = DualAngle.origin
 DualAngle.__index = DualAngle
 function DualAngle:new(a0, a1, ofs)
 	local newInst = setmetatable({
@@ -274,7 +275,7 @@ end
 ]]
 local MockPlayerAttribute = setmetatable({
 	angle = Discrete:new(nil, function (self) return self.val or u_getPlayerAngle() end, 'number'),
-	offset = Discrete:new(0, nil, 'number'),
+	offset = DualAngle.origin,
 	distance = Discrete:new(nil, function (self) return self.val or getDistanceBetweenCenterAndPlayerTip() end, 'number'),
 	height = Discrete:new(nil, function (self) return self.val or getPlayerHeight() end, 'number'),
 	width = Discrete:new(nil, function (self) return self.val or getPlayerBaseWidth() end, 'number'),
