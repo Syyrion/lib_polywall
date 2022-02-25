@@ -110,13 +110,15 @@ function QuadVertex:chget()
 	local r0, g0, b0, a0 = self[0].ch:get()
 	local r1, g1, b1, a1 = self[1].ch:get()
 	local r2, g2, b2, a2 = self[2].ch:get()
-	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3].ch:get()
+	local r3, g3, b3, a3 = self[3].ch:get()
+	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, r3, g3, b3, a3
 end
 function QuadVertex:chrawget()
 	local r0, g0, b0, a0 = self[0].ch:rawget()
 	local r1, g1, b1, a1 = self[1].ch:rawget()
 	local r2, g2, b2, a2 = self[2].ch:rawget()
-	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3].ch:rawget()
+	local r3, g3, b3, a3 = self[3].ch:rawget()
+	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, r3, g3, b3, a3
 end
 function QuadVertex:chfreeze() for i = 0, 3 do self[i].ch:freeze() end end
 function QuadVertex:chdefine(rfn, gfn, bfn, afn) for i = 0, 3 do self[i].ch:define(rfn, gfn, bfn, afn) end end
