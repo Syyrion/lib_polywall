@@ -63,8 +63,8 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 
 local DiscreteVertex = {
 	ch = Channel,
-	pol = Discrete:new(function (a, b) return a, b end, nil, 'function'),
-	col = Discrete:new(function (a, b, c, d) return a, b, c, d end, nil, 'function')
+	pol = Discrete:new(__NOP, nil, 'function'),
+	col = Discrete:new(__NOP, nil, 'function')
 }
 DiscreteVertex.cart = DiscreteVertex.pol
 DiscreteVertex.__index = DiscreteVertex
@@ -125,7 +125,8 @@ function QuadVertex:chresult(...)
 	local r0, g0, b0, a0 = self[0]:result(...)
 	local r1, g1, b1, a1 = self[1]:result(...)
 	local r2, g2, b2, a2 = self[2]:result(...)
-	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, self[3]:result(...)
+	local r3, g3, b3, a3 = self[3]:result(...)
+	return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, r3, g3, b3, a3
 end
 
 function QuadVertex:polset(pol) for i = 0, 3 do self[i].pol:set(pol) end end
@@ -230,22 +231,36 @@ end
 local __MASTER = {}
 __MASTER.__index = __MASTER
 
--- Deletes all walls
-function __MASTER:rrmWall(depth)
+-- Removes a wall with key <key>
+function __MASTER:wremove(key)
+	if type(key) ~= 'table' then errorf(2, 'WallRemoval', 'Argument #1 is not a table.') end
+	if type(key.K) ~= 'number' then errorf(2, 'WallRemoval', 'Invalid or missing custom wall key.') end
+	if not self.W[key] then errorf(2, 'WallRemoval', 'Custom wall <%d> does not exist.', key.K) end
+	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
+	cw_destroy(key.K)
+	self.W[key] = nil
+end
+
+-- Removes all walls
+function __MASTER:wxremove(depth)
 	depth = __VERIFY_DEPTH(depth)
-	local function rrmWall(currentLayer, layerDepth)
+	local function wxremove(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for k, _ in pairs(currentLayer.W) do
-				currentLayer:rmWall(k)
+				currentLayer:wremove(k)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				rrmWall(nextLayer, layerDepth - 1)
+				wxremove(nextLayer, layerDepth - 1)
 			end
 		end
 	end
-	rrmWall(self, depth)
+	wxremove(self, depth)
 end
+
+-- ! Legacy Function Names
+__MASTER.rmWall = __MASTER.wremove
+__MASTER.rrmWall = __MASTER.wxremove
 
 -- Sets all layer wall colors.
 function __MASTER:tint(depth, r, g, b, a)
@@ -323,15 +338,6 @@ function MockPlayerAttribute:create(depth, ...)
 		end
 	end
 	return create(self, depth, ...)
-end
-
-function MockPlayerAttribute:rmWall(key)
-	if type(key) ~= 'table' then errorf(2, 'PlayerRemoval', 'Argument #1 is not a table.') end
-	if type(key.K) ~= 'number' then errorf(2, 'PlayerRemoval', 'Invalid or missing custom wall key.') end
-	if not self.W[key] then errorf(2, 'PlayerRemoval', 'Custom wall <%d> does not exist.', key.K) end
-	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
-	cw_destroy(key.K)
-	self.W[key] = nil
 end
 
 function MockPlayerAttribute:step(depth, mFocus, ...)
@@ -433,6 +439,7 @@ function PolyWallAttribute:add(n, ...)
 	return newLayer
 end
 
+-- Similar to add but acts recursively.
 function PolyWallAttribute:radd(depth, n, ...)
 	depth = __VERIFY_DEPTH(depth)
 	local layerTable = {}
@@ -449,42 +456,52 @@ function PolyWallAttribute:radd(depth, n, ...)
 	return layerTable
 end
 
--- Deletes a layer with integer key <n>.
-function PolyWallAttribute:rmLayer(n)
+-- Removes a layer with integer key <n>.
+function PolyWallAttribute:remove(n)
 	n = type(n) == 'number' and math.floor(n) or errorf(2, 'LayerRemoval', 'Argument #1 is not a number.')
-	if not self[n] then errorf(2, 'LayerRemoval', 'Layer <%d> does not exist.', n) end
-	self[n].P:rrmWall()
-	self[n]:rrmWall()
-	self[n]:rrmLayer()
+	if not self[n] then return end
+	self[n].P:wxremove()
+	self[n]:wxremove()
+	self[n]:xremove()
 	self[n] = nil
 end
 
--- Deletes all layers
-function PolyWallAttribute:rrmLayer(depth)
+-- Similar to remove but acts recursively.
+function PolyWallAttribute:rremove(n, depth)
 	depth = __VERIFY_DEPTH(depth)
-	local function rrmLayer(currentLayer, layerDepth)
+	local function rremove(currentLayer, layerDepth)
 		if layerDepth <= 0 then
-			for k, _ in pairs(currentLayer) do
-				currentLayer:rmLayer(k)
-			end
+			currentLayer:remove(n)
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				rrmLayer(nextLayer, layerDepth - 1)
+				rremove(nextLayer, layerDepth - 1)
 			end
 		end
 	end
-	rrmLayer(self, depth)
+	rremove(self, depth)
 end
 
--- Deletes a layer with cw key <n>.
-function PolyWallAttribute:rmWall(key)
-	if type(key) ~= 'table' then errorf(2, 'WallRemoval', 'Argument #1 is not a table.') end
-	if type(key.K) ~= 'number' then errorf(2, 'WallRemoval', 'Invalid or missing custom wall key.') end
-	if not self.W[key] then errorf(2, 'WallRemoval', 'Custom wall <%d> does not exist.', key.K) end
-	cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
-	cw_destroy(key.K)
-	self.W[key] = nil
+-- Removes all layers
+function PolyWallAttribute:xremove(depth)
+	depth = __VERIFY_DEPTH(depth)
+	local function xremove(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			for k, _ in pairs(currentLayer) do
+				currentLayer:remove(k)
+			end
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				xremove(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	xremove(self, depth)
 end
+
+-- ! Legacy Function Names
+PolyWallAttribute.rrmLayer = PolyWallAttribute.xremove
+PolyWallAttribute.rmLayer = PolyWallAttribute.remove
+
 
 -- Creates a wall of specified type
 -- Type can be 's', 'n' or 'd'
@@ -602,7 +619,7 @@ function PolyWallAttribute:template(depth, n, ...)
 	n = type(n) == 'number' and math.floor(n) - 1 or errorf(2, 'Template', 'Argument #2 is not a number.')
 	local function template(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			currentLayer:rrmLayer()
+			currentLayer:xremove()
 			for i = 0, n do currentLayer:add(i, ...) end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -731,7 +748,7 @@ function PolyWallAttribute:step(depth, ...)
 				local angle0, angle1 = wall.angle:result()
 				local pos, th, innerLim, outerLim = wall.position:get(), wall.thickness:get(), wall.limit:order()
 				if pos <= innerLim - math.abs(th) or pos >= outerLim + math.abs(th) then
-					currentLayer:rmWall(key)
+					currentLayer:wremove(key)
 				else
 					local innerRad, outerRad = clamp(pos, innerLim, outerLim), clamp(pos + th * wall.limit:dir(), innerLim, outerLim)
 					local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
