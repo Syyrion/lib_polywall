@@ -63,10 +63,10 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 
 local DiscreteVertex = {
 	ch = Channel,
-	pol = Discrete:new(__NOP, nil, 'function'),
-	col = Discrete:new(__NOP, nil, 'function')
+	pol = Discrete:new(__NOP, nil, 'function')
 }
 DiscreteVertex.cart = DiscreteVertex.pol
+DiscreteVertex.col = DiscreteVertex.pol
 DiscreteVertex.__index = DiscreteVertex
 function DiscreteVertex:new(r, g, b, a, pol, cart, col)
 	local newInst = setmetatable({
@@ -725,8 +725,13 @@ function PolyWallAttribute:advance(depth, mFrameTime)
 	depth = __VERIFY_DEPTH(depth)
 	local function advance(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			for _, wall in pairs(currentLayer.W) do
-				wall.position:set(wall.position:get() - mFrameTime * wall.speed:get() * wall.limit:dir())
+			for key, wall in pairs(currentLayer.W) do
+				local pos, th, innerLim, outerLim = wall.position:get() - mFrameTime * wall.speed:get() * wall.limit:dir(), wall.thickness:get(), wall.limit:order()
+				if pos <= innerLim - math.abs(th) or pos >= outerLim + math.abs(th) then
+					currentLayer:wremove(key)
+				else
+					wall.position:set(pos)
+				end
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -749,20 +754,16 @@ function PolyWallAttribute:step(depth, ...)
 			for key, wall in pairs(currentLayer.W) do
 				local angle0, angle1 = wall.angle:result()
 				local pos, th, innerLim, outerLim = wall.position:get(), wall.thickness:get(), wall.limit:order()
-				if pos <= innerLim - math.abs(th) or pos >= outerLim + math.abs(th) then
-					currentLayer:wremove(key)
-				else
-					local innerRad, outerRad = clamp(pos, innerLim, outerLim), clamp(pos + th * wall.limit:dir(), innerLim, outerLim)
-					local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
-					local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
-					local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
-					local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0, ...)
-					local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
-					local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
-					local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
-					local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3), ...)
-					cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
-				end
+				local innerRad, outerRad = clamp(pos, innerLim, outerLim), clamp(pos + th * wall.limit:dir(), innerLim, outerLim)
+				local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
+				local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
+				local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
+				local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0, ...)
+				local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
+				local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
+				local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
+				local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3), ...)
+				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
