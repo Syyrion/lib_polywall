@@ -469,7 +469,7 @@ function PolyWallAttribute:remove(n)
 end
 
 -- Similar to remove but acts recursively.
-function PolyWallAttribute:rremove(n, depth)
+function PolyWallAttribute:rremove(depth, n)
 	depth = __VERIFY_DEPTH(depth)
 	local function rremove(currentLayer, layerDepth)
 		if layerDepth <= 0 then
