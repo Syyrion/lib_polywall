@@ -2,7 +2,7 @@
     "disambiguator": "library_polywall",
     "name": "polywall",
     "author": "syyrion",
-    "version": 2105,
+    "version": 2200,
     "priority": -101,
     "dependencies":
 	[
@@ -16,7 +16,7 @@
 			"disambiguator": "library_extbase",
 			"name": "extbase",
 			"author": "syyrion",
-			"min_version": 1001
+			"min_version": 1101
 		}
     ]
 }
