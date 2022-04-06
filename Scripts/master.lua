@@ -24,10 +24,10 @@
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
 Channel = {
-	r = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[1] end, 'number'),
-	g = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[2] end, 'number'),
-	b = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[3] end, 'number'),
-	a = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[4] end, 'number')
+	r = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[1] end, Filter.IS_NUMBER),
+	g = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[2] end, Filter.IS_NUMBER),
+	b = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[3] end, Filter.IS_NUMBER),
+	a = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[4] end, Filter.IS_NUMBER)
 }
 Channel.__index = Channel
 function Channel:new(r, g, b, a)
@@ -63,7 +63,7 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 
 local DiscreteVertex = {
 	ch = Channel,
-	pol = Discrete:new(__NOP, nil, 'function')
+	pol = Discrete:new(__NOP, nil, Filter.IS_FUNCTION)
 }
 DiscreteVertex.cart = DiscreteVertex.pol
 DiscreteVertex.col = DiscreteVertex.pol
@@ -160,7 +160,7 @@ function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 	Handles two angles and an offset
 ]]
 local DualAngle = {
-	origin = Discrete:new(0, nil, 'number')
+	origin = Discrete:new(0, nil, Filter.IS_NUMBER)
 }
 DualAngle.extent = DualAngle.origin
 DualAngle.offset = DualAngle.origin
@@ -189,8 +189,8 @@ end
 	Handles origin and extent limits
 ]]
 local DualLimit = {
-	origin = Discrete:new(1600, nil, 'number'),
-	extent = Discrete:new(nil, function (self) return self.val or getPivotRadius() end, 'number')
+	origin = Discrete:new(1600, nil, Filter.IS_NUMBER),
+	extent = Discrete:new(nil, function (self) return self.val or getPivotRadius() end, Filter.IS_NUMBER)
 }
 DualLimit.__index = DualLimit
 function DualLimit:new(lim0, lim1)
@@ -291,12 +291,12 @@ end
 	* MockPlayer class
 ]]
 local MockPlayerAttribute = setmetatable({
-	angle = Discrete:new(nil, function (self) return self.val or u_getPlayerAngle() end, 'number'),
+	angle = Discrete:new(nil, function (self) return self.val or u_getPlayerAngle() end, Filter.IS_NUMBER),
 	offset = DualAngle.origin,
-	distance = Discrete:new(nil, function (self) return self.val or getDistanceBetweenCenterAndPlayerTip() end, 'number'),
-	height = Discrete:new(nil, function (self) return self.val or getPlayerHeight() end, 'number'),
-	width = Discrete:new(nil, function (self) return self.val or getPlayerBaseWidth() end, 'number'),
-	accurate = Discrete:new(false, nil, 'boolean')
+	distance = Discrete:new(nil, function (self) return self.val or getDistanceBetweenCenterAndPlayerTip() end, Filter.IS_NUMBER),
+	height = Discrete:new(nil, function (self) return self.val or getPlayerHeight() end, Filter.IS_NUMBER),
+	width = Discrete:new(nil, function (self) return self.val or getPlayerBaseWidth() end, Filter.IS_NUMBER),
+	accurate = Discrete:new(false, nil, Filter.IS_BOOLEAN)
 }, __MASTER)
 MockPlayerAttribute.__index = MockPlayerAttribute
 
@@ -397,8 +397,8 @@ end
 	* PolyWall Class
 ]]
 local PolyWallAttribute = setmetatable({
-	thickness = Discrete:new(THICKNESS, nil, 'number'),
-	speed = Discrete:new(nil, function (self) return self.val or getWallSpeedInUnitsPerFrame() end, 'number'),
+	thickness = Discrete:new(THICKNESS, nil, Filter.IS_NUMBER),
+	speed = Discrete:new(nil, function (self) return self.val or getWallSpeedInUnitsPerFrame() end, Filter.IS_NUMBER),
 	vertex = QuadVertex,
 	angle = DualAngle,
 	limit = DualLimit,
@@ -637,7 +637,7 @@ end
 -- All layers to be affected must exist
 function PolyWallAttribute:regularize(depth, shape, ofs)
 	depth = __VERIFY_DEPTH(depth)
-	shape = verifyShape(shape)
+	shape = Filter.IS_SIDE_COUNT(shape) and shape or errorf(2, 'Regularize', 'Invalid side count.')
 	ofs = type(ofs) == 'number' and ofs or 0
 	local arc = math.tau / shape
 	local cur = arc * -0.5
@@ -665,7 +665,7 @@ end
 -- All layers effected must exist
 function PolyWallAttribute:distribute(depth, shape, ofs)
 	depth = __VERIFY_DEPTH(depth)
-	shape = verifyShape(shape)
+	shape = Filter.IS_SIDE_COUNT(shape) and shape or errorf(2, 'Distribute', 'Invalid side count.')
 	ofs = type(ofs) == 'number' and ofs or 0
 	local arc = math.tau / shape
 	local angles = {[0] = ofs}
