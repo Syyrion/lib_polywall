@@ -206,14 +206,11 @@ function DualLimit:get() return self.origin:get(), self.extent:get() end
 function DualLimit:rawget() return self.origin:rawget(), self.extent:rawget() end
 function DualLimit:freeze() self.origin:freeze() self.extent:freeze() end
 function DualLimit:define(lim0fn, lim1fn) self.origin:define(lim0fn) self.extent:define(lim1fn) end
-function DualLimit:swap()
-	local o, e = self:get()
-	self:set(e, o)
-end
+function DualLimit:swap() self.origin, self.extent = self.extent, self.origin end
 function DualLimit:order()
-	local lh, lt = self.origin:get(), self.extent:get()
-	if lh > lt then return lt, lh end
-	return lh, lt
+	local origin, extent = self.origin:get(), self.extent:get()
+	if origin >= extent then return origin, extent, 1 end
+	return extent, origin, -1
 end
 function DualLimit:dir() return self.origin:get() >= self.extent:get() and 1 or -1 end
 
@@ -726,8 +723,9 @@ function PolyWallAttribute:advance(depth, mFrameTime)
 	local function advance(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				local pos, th, innerLim, outerLim = wall.position:get() - mFrameTime * wall.speed:get() * wall.limit:dir(), wall.thickness:get(), wall.limit:order()
-				if pos <= innerLim - math.abs(th) or pos >= outerLim + math.abs(th) then
+				local absth, outer, inner, dir = math.abs(wall.thickness:get()), wall.limit:order()
+				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
+				if pos <= outer - absth or pos >= inner + absth then
 					currentLayer:wremove(key)
 				else
 					wall.position:set(pos)
@@ -753,8 +751,8 @@ function PolyWallAttribute:step(depth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle0, angle1 = wall.angle:result()
-				local pos, th, innerLim, outerLim = wall.position:get(), wall.thickness:get(), wall.limit:order()
-				local innerRad, outerRad = clamp(pos, innerLim, outerLim), clamp(pos + th * wall.limit:dir(), innerLim, outerLim)
+				local pos, th, outer, inner, dir = wall.position:get(), wall.thickness:get(), wall.limit:order()
+				local innerRad, outerRad = clamp(pos, outer, inner), clamp(pos + th * dir, outer, inner)
 				local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
 				local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
 				local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
