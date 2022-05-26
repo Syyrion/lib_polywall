@@ -725,7 +725,7 @@ function PolyWallAttribute:advance(depth, mFrameTime)
 			for key, wall in pairs(currentLayer.W) do
 				local absth, outer, inner, dir = math.abs(wall.thickness:get()), wall.limit:order()
 				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
-				if pos <= outer - absth or pos >= inner + absth then
+				if pos >= outer + absth or pos <= inner - absth then
 					currentLayer:wremove(key)
 				else
 					wall.position:set(pos)
@@ -752,7 +752,7 @@ function PolyWallAttribute:step(depth, ...)
 			for key, wall in pairs(currentLayer.W) do
 				local angle0, angle1 = wall.angle:result()
 				local pos, th, outer, inner, dir = wall.position:get(), wall.thickness:get(), wall.limit:order()
-				local innerRad, outerRad = clamp(pos, outer, inner), clamp(pos + th * dir, outer, inner)
+				local innerRad, outerRad = clamp(pos, inner, outer), clamp(pos + th * dir, inner, outer)
 				local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
 				local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
 				local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
