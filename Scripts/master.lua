@@ -23,6 +23,15 @@
 
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
+
+--[[
+TODO
+
+- Remove the ability to change error filter of values.
+- Merge the color channel values.
+]]
+
+
 Channel = {
 	r = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[1] end, Filter.NUMBER),
 	g = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[2] end, Filter.NUMBER),
@@ -51,7 +60,6 @@ function Channel:freeze() self.r:freeze() self.g:freeze() self.b:freeze() self.a
 function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn) self.b:define(bfn) self.a:define(afn) end
 
 
-
 --[[
 	* VERTEX CLASSES
 ]]
@@ -63,7 +71,7 @@ function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn
 
 local DiscreteVertex = {
 	ch = Channel,
-	pol = Discrete:new(__NOP, nil, Filter.FUNCTION)
+	pol = Cascade:new(Filter.FUNCTION, __NOP)
 }
 DiscreteVertex.cart = DiscreteVertex.pol
 DiscreteVertex.col = DiscreteVertex.pol
@@ -160,7 +168,7 @@ function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 	Handles two angles and an offset
 ]]
 local DualAngle = {
-	origin = Discrete:new(0, nil, Filter.NUMBER)
+	origin = Cascade:new(Filter.NUMBER, 0)
 }
 DualAngle.extent = DualAngle.origin
 DualAngle.offset = DualAngle.origin
@@ -169,7 +177,7 @@ function DualAngle:new(a0, a1, ofs)
 	local newInst = setmetatable({
 		origin = self.origin:new(a0),
 		extent = self.extent:new(a1),
-		offset = self.offset:new(ofs),
+		offset = self.offset:new(ofs)
 	}, self)
 	newInst.__index = newInst
 	return newInst
@@ -189,8 +197,8 @@ end
 	Handles origin and extent limits
 ]]
 local DualLimit = {
-	origin = Discrete:new(1600, nil, Filter.NUMBER),
-	extent = Discrete:new(nil, function (self) return self.val or getPivotRadius() end, Filter.NUMBER)
+	origin = Cascade:new(Filter.NUMBER, nil, l_getWallSpawnDistance()),
+	extent = Cascade:new(Filter.NUMBER, nil, function (self) return self.val or getPivotRadius() end)
 }
 DualLimit.__index = DualLimit
 function DualLimit:new(lim0, lim1)
@@ -220,18 +228,18 @@ function DualLimit:dir() return self.origin:get() >= self.extent:get() and 1 or 
 	* LAYER CLASSES
 ]]
 
-local __VERIFY_DEPTH = function (depth)
+local verifydepth = function (depth)
 	return type(depth) == 'number' and math.floor(depth) or 0
 end
 
 --[[
-	* Master class
+	* Generic class
 ]]
-local __MASTER = {}
-__MASTER.__index = __MASTER
+local Generic = {}
+Generic.__index = Generic
 
 -- Removes a wall with key <key>
-function __MASTER:wremove(key)
+function Generic:wremove(key)
 	if type(key) ~= 'table' then errorf(2, 'WallRemoval', 'Argument #1 is not a table.') end
 	if type(key.K) ~= 'number' then errorf(2, 'WallRemoval', 'Invalid or missing custom wall key.') end
 	if not self.W[key] then errorf(2, 'WallRemoval', 'Custom wall <%d> does not exist.', key.K) end
@@ -241,8 +249,8 @@ function __MASTER:wremove(key)
 end
 
 -- Removes all walls
-function __MASTER:wxremove(depth)
-	depth = __VERIFY_DEPTH(depth)
+function Generic:wxremove(depth)
+	depth = verifydepth(depth)
 	local function wxremove(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for k, _ in pairs(currentLayer.W) do
@@ -258,12 +266,12 @@ function __MASTER:wxremove(depth)
 end
 
 -- ! Legacy Function Names
-__MASTER.rmWall = __MASTER.wremove
-__MASTER.rrmWall = __MASTER.wxremove
+Generic.rmWall = Generic.wremove
+Generic.rrmWall = Generic.wxremove
 
 -- Sets all layer wall colors.
-function __MASTER:tint(depth, r, g, b, a)
-	depth = __VERIFY_DEPTH(depth)
+function Generic:tint(depth, r, g, b, a)
+	depth = verifydepth(depth)
 	local function tint(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for _, wall in pairs(currentLayer.W) do
@@ -279,7 +287,7 @@ function __MASTER:tint(depth, r, g, b, a)
 end
 
 -- Union of tint and fill.
-function __MASTER:shade(depth, r, g, b, a, ...)
+function Generic:shade(depth, r, g, b, a, ...)
 	self:tint(depth, r, g, b, a)
 	self:fill(depth, ...)
 end
@@ -288,13 +296,12 @@ end
 	* MockPlayer class
 ]]
 local MockPlayerAttribute = setmetatable({
-	angle = Discrete:new(nil, function (self) return self.val or u_getPlayerAngle() end, Filter.NUMBER),
+	angle = Cascade:new(Filter.NUMBER, nil, function (self) return self.val or u_getPlayerAngle() end),
 	offset = DualAngle.origin,
-	distance = Discrete:new(nil, function (self) return self.val or getDistanceBetweenCenterAndPlayerTip() end, Filter.NUMBER),
-	height = Discrete:new(nil, function (self) return self.val or getPlayerHeight() end, Filter.NUMBER),
-	width = Discrete:new(nil, function (self) return self.val or getPlayerBaseWidth() end, Filter.NUMBER),
-	accurate = Discrete:new(false, nil, Filter.BOOLEAN)
-}, __MASTER)
+	distance = Cascade:new(Filter.NUMBER, nil, function (self) return self.val or getDistanceBetweenCenterAndPlayerTip() end),
+	height = Cascade:new(Filter.NUMBER, nil, function (self) return self.val or getPlayerHeight() end),
+	width = Cascade:new(Filter.NUMBER, nil, function (self) return self.val or getPlayerBaseWidth() end)
+}, Generic)
 MockPlayerAttribute.__index = MockPlayerAttribute
 
 MockPlayer = setmetatable({}, MockPlayerAttribute)
@@ -307,8 +314,7 @@ function MockPlayerAttribute:construct(parent, a0, ofs, d, h, w, r, g, b, a, pol
 		distance = self.distance:new(d),
 		height = self.height:new(h),
 		width = self.width:new(w),
-		vertex = parent.vertex:new(r, g, b, a, pol, cart, col),
-		accurate = self.accurate:new(acc)
+		vertex = parent.vertex:new(r, g, b, a, pol, cart, col)
 	}
 end
 
@@ -324,7 +330,7 @@ end
 -- Creates a MockPlayer
 -- Returns a tuple of all created wall key objects
 function MockPlayerAttribute:create(depth, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function create(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key = {K = cw_createNoCollision()}
@@ -339,15 +345,24 @@ function MockPlayerAttribute:create(depth, ...)
 	return create(self, depth, ...)
 end
 
+local function getSideRadiusAndAngle(halfWidth, baseRadius)
+	return baseRadius, halfWidth / baseRadius + (baseRadius < 0 and math.pi or 0)
+end
+
+function enableAccurateMockPlayers()
+	function getSideRadiusAndAngle(halfWidth, baseRadius)
+		return (halfWidth * halfWidth + baseRadius * baseRadius) ^ 0.5, math.atan2(halfWidth, baseRadius) + (baseRadius < 0 and math.pi or 0)
+	end
+end
+
 function MockPlayerAttribute:step(depth, mFocus, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function step(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
-				local baseRadius, accurate = distance - wall.height:get(), wall.accurate:get()
-				local sideRadius = accurate and (halfWidth * halfWidth + baseRadius * baseRadius) ^ 0.5 or baseRadius
-				local sideAngle = (accurate and math.atan2 or function (a, b) return a / b end)(halfWidth, baseRadius) + (baseRadius < 0 and math.pi or 0)
+				local baseRadius = distance - wall.height:get()
+				local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
 
 				local r0, a0 = wall.vertex[0].pol:get()(distance, angle, ...)
 				local r1, a1 = wall.vertex[1].pol:get()(sideRadius, angle + sideAngle, ...)
@@ -367,7 +382,7 @@ function MockPlayerAttribute:step(depth, mFocus, ...)
 end
 
 function MockPlayerAttribute:fill(depth, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -394,13 +409,13 @@ end
 	* PolyWall Class
 ]]
 local PolyWallAttribute = setmetatable({
-	thickness = Discrete:new(THICKNESS, nil, Filter.NUMBER),
-	speed = Discrete:new(nil, function (self) return self.val or getWallSpeedInUnitsPerFrame() end, Filter.NUMBER),
+	thickness = Cascade:new(Filter.NUMBER, THICKNESS),
+	speed = Cascade:new(Filter.NUMBER, nil, function (self) return self.val or getWallSpeedInUnitsPerFrame() end),
 	vertex = QuadVertex,
 	angle = DualAngle,
 	limit = DualLimit,
 	P = MockPlayer
-}, __MASTER)
+}, Generic)
 PolyWallAttribute.__index = PolyWallAttribute
 
 PolyWall = setmetatable({}, PolyWallAttribute)
@@ -440,7 +455,7 @@ end
 
 -- Similar to add but acts recursively.
 function PolyWallAttribute:radd(depth, n, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local layerTable = {}
 	local function rrad(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
@@ -467,7 +482,7 @@ end
 
 -- Similar to remove but acts recursively.
 function PolyWallAttribute:rremove(depth, n)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function rremove(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			currentLayer:remove(n)
@@ -482,7 +497,7 @@ end
 
 -- Removes all layers
 function PolyWallAttribute:xremove(depth)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function xremove(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for k, _ in pairs(currentLayer) do
@@ -513,7 +528,7 @@ end
 -- Creates a standard wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:sWall(depth, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function sWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key = {K = cw_create()}
@@ -531,7 +546,7 @@ end
 -- Creates a non-solid wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:nWall(depth, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function nWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key = {K = cw_createNoCollision()}
@@ -549,7 +564,7 @@ end
 -- Creates a deadly wall
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:dWall(depth, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function dWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			local key = {K = cw_createDeadly()}
@@ -565,7 +580,7 @@ function PolyWallAttribute:dWall(depth, ...)
 end
 
 function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function pivotCap(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
@@ -581,7 +596,7 @@ function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, o
 end
 
 function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function pivotBorder(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
@@ -599,7 +614,7 @@ end
 
 -- Returns true if any of the checked layers has a wall.
 function PolyWallAttribute:hasWalls(depth)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function hasWalls(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			assert(not next(currentLayer.W))
@@ -614,7 +629,7 @@ end
 
 -- Creates <n> layers ranging from [0, <n>)
 function PolyWallAttribute:template(depth, n, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	n = type(n) == 'number' and math.floor(n) - 1 or errorf(2, 'Template', 'Argument #2 is not a number.')
 	local function template(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
@@ -633,7 +648,7 @@ end
 -- Only affects layer indexes from [0, <shape>)
 -- All layers to be affected must exist
 function PolyWallAttribute:regularize(depth, shape, ofs)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	shape = Filter.SIDE_COUNT(shape) and shape or errorf(2, 'Regularize', 'Invalid side count.')
 	ofs = type(ofs) == 'number' and ofs or 0
 	local arc = math.tau / shape
@@ -661,7 +676,7 @@ end
 -- Only affects layers from [0, <shape>)
 -- All layers effected must exist
 function PolyWallAttribute:distribute(depth, shape, ofs)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	shape = Filter.SIDE_COUNT(shape) and shape or errorf(2, 'Distribute', 'Invalid side count.')
 	ofs = type(ofs) == 'number' and ofs or 0
 	local arc = math.tau / shape
@@ -688,7 +703,7 @@ end
 -- All layers to be affected must exist
 -- Returns the largest index of the new layers
 function PolyWallAttribute:proportionalize(depth, ofs, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	ofs = type(ofs) == 'number' and ofs or 0
 	local t, ref = {...}, {0}
 	local l = #t
@@ -719,7 +734,7 @@ end
 -- Calculates all layer wall positions.
 -- The ... may seem useless, but it prevents a highly unpredictable bug from occuring.
 function PolyWallAttribute:advance(depth, mFrameTime)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function advance(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -746,7 +761,7 @@ end
 -- The <tf> parameter is used for passing down transformation functions while recursing
 -- Note that all polar and cartesian transformation parameters are unioned.
 function PolyWallAttribute:step(depth, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function step(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -774,7 +789,7 @@ end
 
 -- Updates all layer wall colors.
 function PolyWallAttribute:fill(depth, ...)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -821,7 +836,7 @@ end
 -- Only affects currently existing walls
 -- Layering within layers is unstable and will very likely change
 function PolyWallAttribute:sort(depth, descending)
-	depth = __VERIFY_DEPTH(depth)
+	depth = verifydepth(depth)
 	local keys, layers = {}, {len = 0}
 	local function map(currentLayer, layerDepth, currentBranch)
 		for key, _ in pairs(currentLayer.W) do
