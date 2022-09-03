@@ -23,15 +23,6 @@
 
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
-
---[[
-TODO
-
-- Remove the ability to change error filter of values.
-- Merge the color channel values.
-]]
-
-
 Channel = {
 	r = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[1] end, Filter.NUMBER),
 	g = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[2] end, Filter.NUMBER),
@@ -269,6 +260,14 @@ end
 Generic.rmWall = Generic.wremove
 Generic.rrmWall = Generic.wxremove
 
+
+-- Union of move and fill
+function Generic:run(depth, mFrameTime, ...)
+	self:move(depth, mFrameTime, ...)
+	self:fill(depth, ...)
+end
+
+-- ! Depreciated
 -- Sets all layer wall colors.
 function Generic:tint(depth, r, g, b, a)
 	depth = verifydepth(depth)
@@ -286,6 +285,7 @@ function Generic:tint(depth, r, g, b, a)
 	tint(self, depth)
 end
 
+-- ! Depreciated
 -- Union of tint and fill.
 function Generic:shade(depth, r, g, b, a, ...)
 	self:tint(depth, r, g, b, a)
@@ -355,9 +355,10 @@ function enableAccurateMockPlayers()
 	end
 end
 
-function MockPlayerAttribute:step(depth, mFocus, ...)
+-- Updates MockPlayer positions recursively.
+function MockPlayerAttribute:move(depth, mFocus, ...)
 	depth = verifydepth(depth)
-	local function step(currentLayer, layerDepth, ...)
+	local function move(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
@@ -374,13 +375,17 @@ function MockPlayerAttribute:step(depth, mFocus, ...)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				step(nextLayer, layerDepth - 1, ...)
+				move(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
-	step(self, depth, ...)
+	move(self, depth, ...)
 end
 
+-- ! Legacy Function Name
+MockPlayerAttribute.step = MockPlayerAttribute.move
+
+-- Updates MockPlayer colors recursively
 function MockPlayerAttribute:fill(depth, ...)
 	depth = verifydepth(depth)
 	local function fill(currentLayer, layerDepth, ...)
@@ -398,6 +403,7 @@ function MockPlayerAttribute:fill(depth, ...)
 	fill(self, depth, ...)
 end
 
+-- ! Deprecated
 -- Union of step and shade.
 -- Note that polar, cartesian, and color transformation parameters are unioned.
 function MockPlayerAttribute:draw(depth, mFocus, r, g, b, a, ...)
@@ -731,6 +737,59 @@ function PolyWallAttribute:proportionalize(depth, ofs, ...)
 	return l
 end
 
+-- Advances and moves walls recursively
+function PolyWallAttribute:move(depth, mFrameTime, ...)
+	depth = verifydepth(depth)
+	local function move(currentLayer, layerDepth, ...)
+		if layerDepth <= 0 then
+			for key, wall in pairs(currentLayer.W) do
+				local th = wall.thickness:get()
+				local absth, outer, inner, dir = math.abs(th), wall.limit:order()
+				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
+				if pos >= outer + absth or pos <= inner - absth then
+					currentLayer:wremove(key)
+				else
+					wall.position:set(pos)
+					local angle0, angle1 = wall.angle:result()
+					local innerRad, outerRad = clamp(pos, inner, outer), clamp(pos + th * dir, inner, outer)
+					local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
+					local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
+					local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
+					local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0, ...)
+					local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
+					local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
+					local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
+					local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3), ...)
+					cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
+				end
+			end
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				move(nextLayer, layerDepth - 1, ...)
+			end
+		end
+	end
+	move(self, depth, ...)
+end
+
+-- Updates wall colors recursively.
+function PolyWallAttribute:fill(depth, ...)
+	depth = verifydepth(depth)
+	local function fill(currentLayer, layerDepth, ...)
+		if layerDepth <= 0 then
+			for key, wall in pairs(currentLayer.W) do
+				cw_setVertexColor4(key.K, wall.vertex:chresult(...))
+			end
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				fill(nextLayer, layerDepth - 1, ...)
+			end
+		end
+	end
+	fill(self, depth, ...)
+end
+
+-- ! Depreciated
 -- Calculates all layer wall positions.
 -- The ... may seem useless, but it prevents a highly unpredictable bug from occuring.
 function PolyWallAttribute:advance(depth, mFrameTime)
@@ -755,6 +814,7 @@ function PolyWallAttribute:advance(depth, mFrameTime)
 	advance(self, depth)
 end
 
+-- ! Depreciated
 -- Recursively updates all layer wall positions.
 -- Depth is how many layers to descend to update walls
 -- Transformations of all layers passed through while recursing are applied in reverse order when a wall is moved
@@ -787,29 +847,14 @@ function PolyWallAttribute:step(depth, ...)
 	step(self, depth, ...)
 end
 
--- Updates all layer wall colors.
-function PolyWallAttribute:fill(depth, ...)
-	depth = verifydepth(depth)
-	local function fill(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
-			for key, wall in pairs(currentLayer.W) do
-				cw_setVertexColor4(key.K, wall.vertex:chresult(...))
-			end
-		else
-			for _, nextLayer in pairs(currentLayer) do
-				fill(nextLayer, layerDepth - 1, ...)
-			end
-		end
-	end
-	fill(self, depth, ...)
-end
-
+-- ! Depreciated
 -- Union of advance and tint.
 function PolyWallAttribute:arrange(depth, mFrameTime, r, g, b, a)
 	self:advance(depth, mFrameTime)
 	self:tint(depth, r, g, b, a)
 end
 
+-- ! Depreciated
 -- Union of fill and step.
 -- Note that polar, cartesian, and color transformation parameters are unioned.
 function PolyWallAttribute:update(depth, ...)
@@ -817,12 +862,7 @@ function PolyWallAttribute:update(depth, ...)
 	self:fill(depth, ...)
 end
 
--- Union of advance and step.
-function PolyWallAttribute:move(depth, mFrameTime, ...)
-	self:advance(depth, mFrameTime)
-	self:step(depth, ...)
-end
-
+-- ! Depreciated
 -- Union of arrange and update.
 -- Note that polar, cartesian, and color transformation parameters are unioned.
 function PolyWallAttribute:draw(depth, mFrameTime, r, g, b, a, ...)
