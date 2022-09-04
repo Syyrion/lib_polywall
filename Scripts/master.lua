@@ -23,34 +23,6 @@
 
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
-Channel = {
-	r = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[1] end, Filter.NUMBER),
-	g = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[2] end, Filter.NUMBER),
-	b = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[3] end, Filter.NUMBER),
-	a = Discrete:new(nil, function (self) return self.val or ({s_getMainColor()})[4] end, Filter.NUMBER)
-}
-Channel.__index = Channel
-function Channel:new(r, g, b, a)
-	local newInst = setmetatable({
-		r = self.r:new(r),
-		g = self.g:new(g),
-		b = self.b:new(b),
-		a = self.a:new(a),
-	}, self)
-	newInst.__index = newInst
-	return newInst
-end
-function Channel:set(r, g, b, a) self.r:set(r) self.g:set(g) self.b:set(b) self.a:set(a) end
-function Channel:sethsv(h, s, v)
-	local r, g, b = fromHSV(h, s, v)
-	self.r:set(r) self.g:set(g) self.b:set(b)
-end
-function Channel:get() return self.r:get(), self.g:get(), self.b:get(), self.a:get() end
-function Channel:rawget() return self.r:rawget(), self.g:rawget(), self.b:rawget(), self.a:rawget() end
-function Channel:freeze() self.r:freeze() self.g:freeze() self.b:freeze() self.a:freeze() end
-function Channel:define(rfn, gfn, bfn, afn) self.r:define(rfn) self.g:define(gfn) self.b:define(bfn) self.a:define(afn) end
-
-
 --[[
 	* VERTEX CLASSES
 ]]
@@ -122,6 +94,7 @@ end
 function QuadVertex:chfreeze() for i = 0, 3 do self[i].ch:freeze() end end
 function QuadVertex:chdefine(rfn, gfn, bfn, afn) for i = 0, 3 do self[i].ch:define(rfn, gfn, bfn, afn) end end
 
+-- ! Depreciated
 function QuadVertex:chresult(...)
 	local r0, g0, b0, a0 = self[0]:result(...)
 	local r1, g1, b1, a1 = self[1]:result(...)
@@ -260,13 +233,6 @@ end
 Generic.rmWall = Generic.wremove
 Generic.rrmWall = Generic.wxremove
 
-
--- Union of move and fill
-function Generic:run(depth, mFrameTime, ...)
-	self:move(depth, mFrameTime, ...)
-	self:fill(depth, ...)
-end
-
 -- ! Depreciated
 -- Sets all layer wall colors.
 function Generic:tint(depth, r, g, b, a)
@@ -307,7 +273,7 @@ MockPlayerAttribute.__index = MockPlayerAttribute
 MockPlayer = setmetatable({}, MockPlayerAttribute)
 MockPlayerAttribute.L = MockPlayer
 
-function MockPlayerAttribute:construct(parent, a0, ofs, d, h, w, r, g, b, a, pol, cart, col, acc)
+function MockPlayerAttribute:construct(parent, a0, ofs, d, h, w, r, g, b, a, pol, cart, col)
 	return {
 		angle = self.angle:new(a0),
 		offset = self.offset:new(ofs),
@@ -355,10 +321,10 @@ function enableAccurateMockPlayers()
 	end
 end
 
--- Updates MockPlayer positions recursively.
-function MockPlayerAttribute:move(depth, mFocus, ...)
-	depth = verifydepth(depth)
-	local function move(currentLayer, layerDepth, ...)
+-- ! Depreciated
+function MockPlayerAttribute:step(depth, mFocus, ...)
+	depth = __VERIFY_DEPTH(depth)
+	local function step(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
@@ -375,19 +341,16 @@ function MockPlayerAttribute:move(depth, mFocus, ...)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				move(nextLayer, layerDepth - 1, ...)
+				step(nextLayer, layerDepth - 1, ...)
 			end
 		end
 	end
-	move(self, depth, ...)
+	step(self, depth, ...)
 end
 
--- ! Legacy Function Name
-MockPlayerAttribute.step = MockPlayerAttribute.move
-
--- Updates MockPlayer colors recursively
+-- ! Depreciated
 function MockPlayerAttribute:fill(depth, ...)
-	depth = verifydepth(depth)
+	depth = __VERIFY_DEPTH(depth)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
@@ -403,12 +366,45 @@ function MockPlayerAttribute:fill(depth, ...)
 	fill(self, depth, ...)
 end
 
--- ! Deprecated
+-- ! Depreciated
 -- Union of step and shade.
 -- Note that polar, cartesian, and color transformation parameters are unioned.
 function MockPlayerAttribute:draw(depth, mFocus, r, g, b, a, ...)
 	self:step(depth, mFocus, ...)
 	self:shade(depth, r, g, b, a, ...)
+end
+
+function MockPlayerAttribute:run(depth, mFocus)
+	depth = verifydepth(depth)
+	local function run(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			for key, wall in pairs(currentLayer.W) do
+				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
+				local baseRadius = distance - wall.height:get()
+				local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
+
+				local r0, a0 = wall.vertex[0].pol:get()(distance, angle)
+				local r1, a1 = wall.vertex[1].pol:get()(sideRadius, angle + sideAngle)
+				local r2, a2 = wall.vertex[2].pol:get()(sideRadius, angle - sideAngle)
+				local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0))
+				local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1))
+				local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2))
+
+				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x2, y2)
+
+				local R0, G0, B0, A0 = wall.vertex[0]:result(r0, a0, x0, y0)
+				local R1, G1, B1, A1 = wall.vertex[1]:result(r1, a1, x1, y1)
+				local R2, G2, B2, A2 = wall.vertex[2]:result(r2, a2, x2, y2)
+
+				cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R2, G2, B2, A2)
+			end
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				run(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	run(self, depth)
 end
 
 --[[
@@ -737,58 +733,6 @@ function PolyWallAttribute:proportionalize(depth, ofs, ...)
 	return l
 end
 
--- Advances and moves walls recursively
-function PolyWallAttribute:move(depth, mFrameTime, ...)
-	depth = verifydepth(depth)
-	local function move(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
-			for key, wall in pairs(currentLayer.W) do
-				local th = wall.thickness:get()
-				local absth, outer, inner, dir = math.abs(th), wall.limit:order()
-				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
-				if pos >= outer + absth or pos <= inner - absth then
-					currentLayer:wremove(key)
-				else
-					wall.position:set(pos)
-					local angle0, angle1 = wall.angle:result()
-					local innerRad, outerRad = clamp(pos, inner, outer), clamp(pos + th * dir, inner, outer)
-					local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
-					local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
-					local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
-					local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0, ...)
-					local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
-					local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
-					local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
-					local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3), ...)
-					cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
-				end
-			end
-		else
-			for _, nextLayer in pairs(currentLayer) do
-				move(nextLayer, layerDepth - 1, ...)
-			end
-		end
-	end
-	move(self, depth, ...)
-end
-
--- Updates wall colors recursively.
-function PolyWallAttribute:fill(depth, ...)
-	depth = verifydepth(depth)
-	local function fill(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
-			for key, wall in pairs(currentLayer.W) do
-				cw_setVertexColor4(key.K, wall.vertex:chresult(...))
-			end
-		else
-			for _, nextLayer in pairs(currentLayer) do
-				fill(nextLayer, layerDepth - 1, ...)
-			end
-		end
-	end
-	fill(self, depth, ...)
-end
-
 -- ! Depreciated
 -- Calculates all layer wall positions.
 -- The ... may seem useless, but it prevents a highly unpredictable bug from occuring.
@@ -848,6 +792,24 @@ function PolyWallAttribute:step(depth, ...)
 end
 
 -- ! Depreciated
+-- Updates wall colors recursively.
+function PolyWallAttribute:fill(depth, ...)
+	depth = verifydepth(depth)
+	local function fill(currentLayer, layerDepth, ...)
+		if layerDepth <= 0 then
+			for key, wall in pairs(currentLayer.W) do
+				cw_setVertexColor4(key.K, wall.vertex:chresult(...))
+			end
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				fill(nextLayer, layerDepth - 1, ...)
+			end
+		end
+	end
+	fill(self, depth, ...)
+end
+
+-- ! Depreciated
 -- Union of advance and tint.
 function PolyWallAttribute:arrange(depth, mFrameTime, r, g, b, a)
 	self:advance(depth, mFrameTime)
@@ -863,11 +825,60 @@ function PolyWallAttribute:update(depth, ...)
 end
 
 -- ! Depreciated
+-- Union of advance and step.
+function PolyWallAttribute:move(depth, mFrameTime, ...)
+	self:advance(depth, mFrameTime)
+	self:step(depth, ...)
+end
+
+-- ! Depreciated
 -- Union of arrange and update.
 -- Note that polar, cartesian, and color transformation parameters are unioned.
 function PolyWallAttribute:draw(depth, mFrameTime, r, g, b, a, ...)
 	self:arrange(depth, mFrameTime, r, g, b, a)
 	self:update(depth, ...)
+end
+
+
+function PolyWallAttribute:run(depth, mFrameTime)
+	depth = verifydepth(depth)
+	local function run(currentLayer, layerDepth)
+		if layerDepth <= 0 then
+			for key, wall in pairs(currentLayer.W) do
+				local th = wall.thickness:get()
+				local absth, outer, inner, dir = math.abs(th), wall.limit:order()
+				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
+				if pos >= outer + absth or pos <= inner - absth then
+					currentLayer:wremove(key)
+				else
+					wall.position:set(pos)
+					local angle0, angle1 = wall.angle:result()
+					local innerRad, outerRad = clamp(pos, inner, outer), clamp(pos + th * dir, inner, outer)
+					local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0)
+					local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1)
+					local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1)
+					local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0)
+					local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0))
+					local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1))
+					local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2))
+					local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3))
+
+					local R0, G0, B0, A0 = wall.vertex[0]:result(r0, a0, x0, y0)
+					local R1, G1, B1, A1 = wall.vertex[1]:result(r1, a1, x1, y1)
+					local R2, G2, B2, A2 = wall.vertex[2]:result(r2, a2, x2, y2)
+					local R3, G3, B3, A3 = wall.vertex[3]:result(r3, a3, x3, y3)
+
+					cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
+					cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R3, G3, B3, A3)
+				end
+			end
+		else
+			for _, nextLayer in pairs(currentLayer) do
+				run(nextLayer, layerDepth - 1)
+			end
+		end
+	end
+	run(self, depth)
 end
 
 -- Sorts wall CW handles such that lower numbered handles are moved to lower layers and higher numbered handles to higher layers
