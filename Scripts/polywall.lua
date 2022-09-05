@@ -1,3 +1,4 @@
+---@diagnostic disable: redundant-parameter
 u_execScript('basewall.lua')
 print("!! WARNING !! polwall.lua is deprecated.\nNo further feature updates will be given to this script.\nPlease migrate code to use master.lua.")
 

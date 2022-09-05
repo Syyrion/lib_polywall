@@ -1,3 +1,4 @@
+---@diagnostic disable: redundant-parameter
 u_execScript('basewall.lua')
 print("!! WARNING !! arcwall.lua is deprecated.\nNo further feature updates will be given to this script.\nPlease migrate code to use master.lua.")
 
@@ -234,7 +235,7 @@ function ArcWall:wallMove(mFrameTime, key, ...)
 		local innerPos, outerPos = clamp(newPos, innerLim, outerLim), clamp(newPos + (speed >= 0 and 1 or -1) * thickness, innerLim, outerLim)
 		local anglePrimary, angleSecondary = self:getWallAnglePrimary(key), self:getWallAngleSecondary(key)
 		local transPolar, transCartesian = self:getLayerTransPolar(l) or function(r, a) return r, a end, self:getLayerTransCartesian(l) or function(x, y) return x, y end
-
+		
 		-- Refer to BaseWall.lua for a diagram detailing vertex order
 		local r0, a0 = transPolar(innerPos, anglePrimary, 0, ...)
 		local r1, a1 = transPolar(innerPos, angleSecondary, 1, ...)
