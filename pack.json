@@ -2,7 +2,7 @@
     "disambiguator": "library_polywall",
     "name": "polywall",
     "author": "syyrion",
-    "version": 2201,
+    "version": 2300,
     "priority": -101,
     "dependencies":
 	[
