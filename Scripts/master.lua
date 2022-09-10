@@ -363,25 +363,7 @@ end
 
 --#endregion
 
-local function mpMove(key, wall, mFocus, ...)
-	local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
-	local baseRadius = distance - wall.height:get()
-	local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
-	local r0, a0 = wall.vertex[0].pol:get()(distance, angle, ...)
-	local r1, a1 = wall.vertex[1].pol:get()(sideRadius, angle + sideAngle, ...)
-	local r2, a2 = wall.vertex[2].pol:get()(sideRadius, angle - sideAngle, ...)
-	local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
-	local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
-	local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
-	cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x2, y2)
-end
 
-local function mpFill(key, wall_vertex, ...)
-	local R0, G0, B0, A0 = wall_vertex[0]:result(...)
-	local R1, G1, B1, A1 = wall_vertex[1]:result(...)
-	local R2, G2, B2, A2 = wall_vertex[2]:result(...)
-	cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R2, G2, B2, A2)
-end
 
 -- ! Passing arguments to transformations via movement functions is no longer supported.
 function MockPlayerAttribute:move(depth, mFocus, ...)
@@ -389,7 +371,16 @@ function MockPlayerAttribute:move(depth, mFocus, ...)
 	local function move(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				mpMove(key, wall, mFocus, ...)
+				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
+				local baseRadius = distance - wall.height:get()
+				local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
+				local r0, a0 = wall.vertex[0].pol:get()(distance, angle, ...)
+				local r1, a1 = wall.vertex[1].pol:get()(sideRadius, angle + sideAngle, ...)
+				local r2, a2 = wall.vertex[2].pol:get()(sideRadius, angle - sideAngle, ...)
+				local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
+				local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
+				local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
+				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x2, y2)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -406,7 +397,10 @@ function MockPlayerAttribute:fill(depth, ...)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				mpFill(key, wall.vertex, ...)
+				local R0, G0, B0, A0 = wall.vertex[0]:result(...)
+				local R1, G1, B1, A1 = wall.vertex[1]:result(...)
+				local R2, G2, B2, A2 = wall.vertex[2]:result(...)
+				cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R2, G2, B2, A2)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -422,8 +416,20 @@ function MockPlayerAttribute:run(depth, mFocus)
 	local function run(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				mpMove(key, wall, mFocus)
-				mpFill(key, wall.vertex)
+				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
+				local baseRadius = distance - wall.height:get()
+				local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
+				local r0, a0 = wall.vertex[0].pol:get()(distance, angle)
+				local r1, a1 = wall.vertex[1].pol:get()(sideRadius, angle + sideAngle)
+				local r2, a2 = wall.vertex[2].pol:get()(sideRadius, angle - sideAngle)
+				local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0))
+				local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1))
+				local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2))
+				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x2, y2)
+				local R0, G0, B0, A0 = wall.vertex[0]:result(r0, a0, x0, y0)
+				local R1, G1, B1, A1 = wall.vertex[1]:result(r1, a1, x1, y1)
+				local R2, G2, B2, A2 = wall.vertex[2]:result(r2, a2, x2, y2)
+				cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R2, G2, B2, A2)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -846,36 +852,7 @@ end
 
 --#endregion
 
-local function pwMove(key, wall, mFrameTime, currentLayer, ...)
-	local th = wall.thickness:get()
-	local absth, outer, inner, dir = math.abs(th), wall.limit:order()
-	local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
-	if pos >= outer + absth or pos <= inner - absth then
-		currentLayer:wremove(key)
-		return false
-	end
-	wall.position:set(pos)
-	local angle0, angle1 = wall.angle:result()
-	local innerRad, outerRad = clamp(pos, inner, outer), clamp(pos + th * dir, inner, outer)
-	local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
-	local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
-	local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
-	local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0, ...)
-	local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
-	local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
-	local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
-	local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3), ...)
-	cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
-	return true
-end
 
-local function pwFill(key, wall_vertex, ...)
-	local R0, G0, B0, A0 = wall_vertex[0]:result(...)
-	local R1, G1, B1, A1 = wall_vertex[1]:result(...)
-	local R2, G2, B2, A2 = wall_vertex[2]:result(...)
-	local R3, G3, B3, A3 = wall_vertex[3]:result(...)
-	cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R3, G3, B3, A3)
-end
 
 -- ! Passing arguments to transformations via movement functions is no longer supported.
 -- Union of advance and step.
@@ -884,7 +861,24 @@ function PolyWallAttribute:move(depth, mFrameTime, ...)
 	local function move(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				pwMove(key, wall, mFrameTime, currentLayer, ...)
+				local th = wall.thickness:get()
+				local absth, outer, inner, dir = math.abs(th), wall.limit:order()
+				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
+				if pos >= outer + absth or pos <= inner - absth then
+					currentLayer:wremove(key)
+				end
+				wall.position:set(pos)
+				local angle0, angle1 = wall.angle:result()
+				local innerRad, outerRad = clamp(pos, inner, outer), clamp(pos + th * dir, inner, outer)
+				local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0, ...)
+				local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1, ...)
+				local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1, ...)
+				local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0, ...)
+				local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0), ...)
+				local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1), ...)
+				local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2), ...)
+				local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3), ...)
+				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -902,7 +896,11 @@ function PolyWallAttribute:fill(depth, ...)
 	local function fill(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				pwFill(key, wall.vertex, ...)
+				local R0, G0, B0, A0 = wall.vertex[0]:result(...)
+				local R1, G1, B1, A1 = wall.vertex[1]:result(...)
+				local R2, G2, B2, A2 = wall.vertex[2]:result(...)
+				local R3, G3, B3, A3 = wall.vertex[3]:result(...)
+				cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R3, G3, B3, A3)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -918,9 +916,29 @@ function PolyWallAttribute:run(depth, mFrameTime)
 	local function run(currentLayer, layerDepth)
 		if layerDepth <= 0 then
 			for key, wall in pairs(currentLayer.W) do
-				if pwMove(key, wall, mFrameTime, currentLayer) then
-					pwFill(key, wall.vertex)
+				local th = wall.thickness:get()
+				local absth, outer, inner, dir = math.abs(th), wall.limit:order()
+				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
+				if pos >= outer + absth or pos <= inner - absth then
+					currentLayer:wremove(key)
 				end
+				wall.position:set(pos)
+				local angle0, angle1 = wall.angle:result()
+				local innerRad, outerRad = clamp(pos, inner, outer), clamp(pos + th * dir, inner, outer)
+				local r0, a0 = wall.vertex[0].pol:get()(innerRad, angle0)
+				local r1, a1 = wall.vertex[1].pol:get()(innerRad, angle1)
+				local r2, a2 = wall.vertex[2].pol:get()(outerRad, angle1)
+				local r3, a3 = wall.vertex[3].pol:get()(outerRad, angle0)
+				local x0, y0 = wall.vertex[0].cart:get()(r0 * math.cos(a0), r0 * math.sin(a0))
+				local x1, y1 = wall.vertex[1].cart:get()(r1 * math.cos(a1), r1 * math.sin(a1))
+				local x2, y2 = wall.vertex[2].cart:get()(r2 * math.cos(a2), r2 * math.sin(a2))
+				local x3, y3 = wall.vertex[3].cart:get()(r3 * math.cos(a3), r3 * math.sin(a3))
+				cw_setVertexPos4(key.K, x0, y0, x1, y1, x2, y2, x3, y3)
+				local R0, G0, B0, A0 = wall.vertex[0]:result(r0, a0, x0, y0)
+				local R1, G1, B1, A1 = wall.vertex[1]:result(r1, a1, x1, y1)
+				local R2, G2, B2, A2 = wall.vertex[2]:result(r2, a2, x2, y2)
+				local R3, G3, B3, A3 = wall.vertex[3]:result(r3, a3, x3, y3)
+				cw_setVertexColor4(key.K, R0, G0, B0, A0, R1, G1, B1, A1, R2, G2, B2, A2, R3, G3, B3, A3)
 			end
 		else
 			for _, nextLayer in pairs(currentLayer) do
