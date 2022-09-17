@@ -75,8 +75,8 @@ function QuadVertex:new(r, g, b, a, pol, cart, col)
 	newInst.__index = newInst
 	return newInst
 end
-function QuadVertex:chsetcolor(r, g, b) for i = 0, 3 do self[i].ch:setcolor(r, g, b, a) end end
-function QuadVertex:chsetalpha(a) for i = 0, 3 do self[i].ch:setalpha(r, g, b, a) end end
+function QuadVertex:chsetcolor(r, g, b) for i = 0, 3 do self[i].ch:setcolor(r, g, b) end end
+function QuadVertex:chsetalpha(a) for i = 0, 3 do self[i].ch:setalpha(r) end end
 function QuadVertex:chset(r, g, b, a) for i = 0, 3 do self[i].ch:set(r, g, b, a) end end
 function QuadVertex:chsethsv(h, s, v) for i = 0, 3 do self[i].ch:sethsv(h, s, v) end end
 function QuadVertex:chget()
@@ -122,8 +122,6 @@ function QuadVertex:colget() return self[0].col:get(), self[1].col:get(), self[2
 function QuadVertex:colrawget() return self[0].col:rawget(), self[1].col:rawget(), self[2].col:rawget(), self[3].col:rawget() end
 function QuadVertex:colfreeze() for i = 0, 3 do self[i].pol:freeze() end end
 function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
-
-
 
 --[[
 	* PARAMETER CLASSES
