@@ -76,7 +76,7 @@ function QuadVertex:new(r, g, b, a, pol, cart, col)
 	return newInst
 end
 function QuadVertex:chsetcolor(r, g, b) for i = 0, 3 do self[i].ch:setcolor(r, g, b) end end
-function QuadVertex:chsetalpha(a) for i = 0, 3 do self[i].ch:setalpha(r) end end
+function QuadVertex:chsetalpha(a) for i = 0, 3 do self[i].ch:setalpha(a) end end
 function QuadVertex:chset(r, g, b, a) for i = 0, 3 do self[i].ch:set(r, g, b, a) end end
 function QuadVertex:chsethsv(h, s, v) for i = 0, 3 do self[i].ch:sethsv(h, s, v) end end
 function QuadVertex:chget()
@@ -299,9 +299,9 @@ function MockPlayerAttribute:create(depth, ...)
 	depth = verifydepth(depth)
 	local function create(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = {K = cw_createNoCollision()}
-			currentLayer.W[key] = currentLayer:construct(currentLayer, ...)
-			return key
+			local key, mp = {K = cw_createNoCollision()}, currentLayer:construct(currentLayer, ...)
+			currentLayer.W[key] = mp
+			return mp, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				create(nextLayer, layerDepth - 1, ...)
@@ -564,9 +564,9 @@ function PolyWallAttribute:sWall(depth, ...)
 	depth = verifydepth(depth)
 	local function sWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = {K = cw_create()}
-			currentLayer.W[key] = currentLayer:construct(...)
-			return key
+			local key, wall = {K = cw_create()}, currentLayer:construct(...)
+			currentLayer.W[key] = wall
+			return wall, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				sWall(nextLayer, layerDepth - 1, ...)
@@ -582,9 +582,9 @@ function PolyWallAttribute:nWall(depth, ...)
 	depth = verifydepth(depth)
 	local function nWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = {K = cw_createNoCollision()}
-			currentLayer.W[key] = currentLayer:construct(...)
-			return key
+			local key, wall = {K = cw_createNoCollision()}, currentLayer:construct(...)
+			currentLayer.W[key] = wall
+			return wall, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				nWall(nextLayer, layerDepth - 1, ...)
@@ -600,9 +600,9 @@ function PolyWallAttribute:dWall(depth, ...)
 	depth = verifydepth(depth)
 	local function dWall(currentLayer, layerDepth, ...)
 		if layerDepth <= 0 then
-			local key = {K = cw_createDeadly()}
-			currentLayer.W[key] = currentLayer:construct(...)
-			return key
+			local key, wall = {K = cw_createDeadly()}, currentLayer:construct(...)
+			currentLayer.W[key] = wall
+			return wall, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				dWall(nextLayer, layerDepth - 1, ...)
@@ -616,9 +616,9 @@ function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, o
 	depth = verifydepth(depth)
 	local function pivotCap(currentLayer, layerDepth)
 		if layerDepth <= 0 then
-			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
-			currentLayer.W[key].thickness:define(getCapRadius)
-			return key
+			local wall, key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
+			wall.thickness:define(getCapRadius)
+			return wall, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				pivotCap(nextLayer, layerDepth - 1)
@@ -632,10 +632,10 @@ function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1
 	depth = verifydepth(depth)
 	local function pivotBorder(currentLayer, layerDepth)
 		if layerDepth <= 0 then
-			local key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
-			currentLayer.W[key].thickness:define(getPivotRadius)
-			currentLayer.W[key].limit.extent:define(getCapRadius)
-			return key
+			local wall, key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
+			wall.thickness:define(getPivotRadius)
+			wall.limit.extent:define(getCapRadius)
+			return wall, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
 				pivotBorder(nextLayer, layerDepth - 1)
