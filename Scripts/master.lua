@@ -24,11 +24,11 @@
 u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
 --[[
-	* VERTEX CLASSES
+	-- # VERTEX CLASSES
 ]]
 
 --[[
-	* Discrete Vertex Class
+	-- # Discrete Vertex Class
 	Handles a single vertex's col and transformations
 ]]
 
@@ -55,7 +55,7 @@ function DiscreteVertex:result(...)
 end
 
 --[[
-	* Quad vertex class
+	-- # Quad vertex class
 	Handles 4 vertex classes at once
 ]]
 local QuadVertex = {
@@ -124,11 +124,11 @@ function QuadVertex:colfreeze() for i = 0, 3 do self[i].pol:freeze() end end
 function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
 
 --[[
-	* PARAMETER CLASSES
+	-- # PARAMETER CLASSES
 ]]
 
 --[[
-	* Dual angle parameter class
+	-- # Dual angle parameter class
 	Handles two angles and an offset
 ]]
 local DualAngle = {
@@ -157,7 +157,7 @@ function DualAngle:result()
 end
 
 --[[
-	* Dual limit parameter class
+	-- # Dual limit parameter class
 	Handles origin and extent limits
 ]]
 local DualLimit = {
@@ -189,7 +189,7 @@ function DualLimit:dir() return self.origin:get() >= self.extent:get() and 1 or 
 
 
 --[[
-	* LAYER CLASSES
+	-- # LAYER CLASSES
 ]]
 
 local verifydepth = function (depth)
@@ -216,7 +216,7 @@ end
 function Generic:wxremove(depth)
 	depth = verifydepth(depth)
 	local function wxremove(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for k, _ in pairs(currentLayer.W) do
 				currentLayer:wremove(k)
 			end
@@ -238,7 +238,7 @@ Generic.rrmWall = Generic.wxremove
 function Generic:tint(depth, r, g, b, a)
 	depth = verifydepth(depth)
 	local function tint(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for _, wall in pairs(currentLayer.W) do
 				wall.vertex:chset(r, g, b, a)
 			end
@@ -259,7 +259,7 @@ function Generic:shade(depth, r, g, b, a, ...)
 end
 
 --[[
-	* MockPlayer class
+	-- # MockPlayer class
 ]]
 local MockPlayerAttribute = setmetatable({
 	angle = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or u_getPlayerAngle() end),
@@ -298,7 +298,7 @@ end
 function MockPlayerAttribute:create(depth, ...)
 	depth = verifydepth(depth)
 	local function create(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			local key, mp = {K = cw_createNoCollision()}, currentLayer:construct(currentLayer, ...)
 			currentLayer.W[key] = mp
 			return mp, key
@@ -328,7 +328,7 @@ end
 function MockPlayerAttribute:step(depth, mFocus, ...)
 	depth = verifydepth(depth)
 	local function step(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
 				local baseRadius = distance - wall.height:get()
@@ -367,7 +367,7 @@ end
 function MockPlayerAttribute:move(depth, mFocus, ...)
 	depth = verifydepth(depth)
 	local function move(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
 				local baseRadius = distance - wall.height:get()
@@ -393,7 +393,7 @@ end
 function MockPlayerAttribute:fill(depth, ...)
 	depth = verifydepth(depth)
 	local function fill(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local R0, G0, B0, A0 = wall.vertex[0]:result(...)
 				local R1, G1, B1, A1 = wall.vertex[1]:result(...)
@@ -412,7 +412,7 @@ end
 function MockPlayerAttribute:run(depth, mFocus)
 	depth = verifydepth(depth)
 	local function run(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
 				local baseRadius = distance - wall.height:get()
@@ -439,7 +439,7 @@ function MockPlayerAttribute:run(depth, mFocus)
 end
 
 --[[
-	* PolyWall Class
+	-- # PolyWall Class
 ]]
 local PolyWallAttribute = setmetatable({
 	thickness = Cascade.new(Filter.NUMBER, THICKNESS),
@@ -491,7 +491,7 @@ function PolyWallAttribute:radd(depth, n, ...)
 	depth = verifydepth(depth)
 	local layerTable = {}
 	local function rrad(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			table.insert(layerTable, currentLayer:add(n, ...))
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -517,7 +517,7 @@ end
 function PolyWallAttribute:rremove(depth, n)
 	depth = verifydepth(depth)
 	local function rremove(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			currentLayer:remove(n)
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -532,7 +532,7 @@ end
 function PolyWallAttribute:xremove(depth)
 	depth = verifydepth(depth)
 	local function xremove(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for k, _ in pairs(currentLayer) do
 				currentLayer:remove(k)
 			end
@@ -563,8 +563,8 @@ end
 function PolyWallAttribute:sWall(depth, ...)
 	depth = verifydepth(depth)
 	local function sWall(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
-			local key, wall = {K = cw_create()}, currentLayer:construct(...)
+		if layerDepth == 0 then
+			local key, wall = {K = cw_create(), C = true, D = false}, currentLayer:construct(...)
 			currentLayer.W[key] = wall
 			return wall, key
 		else
@@ -581,8 +581,8 @@ end
 function PolyWallAttribute:nWall(depth, ...)
 	depth = verifydepth(depth)
 	local function nWall(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
-			local key, wall = {K = cw_createNoCollision()}, currentLayer:construct(...)
+		if layerDepth == 0 then
+			local key, wall = {K = cw_createNoCollision(), C = false, D = false}, currentLayer:construct(...)
 			currentLayer.W[key] = wall
 			return wall, key
 		else
@@ -599,8 +599,8 @@ end
 function PolyWallAttribute:dWall(depth, ...)
 	depth = verifydepth(depth)
 	local function dWall(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
-			local key, wall = {K = cw_createDeadly()}, currentLayer:construct(...)
+		if layerDepth == 0 then
+			local key, wall = {K = cw_createDeadly(), C = true, D = true}, currentLayer:construct(...)
 			currentLayer.W[key] = wall
 			return wall, key
 		else
@@ -615,7 +615,7 @@ end
 function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = verifydepth(depth)
 	local function pivotCap(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			local wall, key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			wall.thickness:define(getCapRadius)
 			return wall, key
@@ -631,7 +631,7 @@ end
 function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = verifydepth(depth)
 	local function pivotBorder(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			local wall, key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			wall.thickness:define(getPivotRadius)
 			wall.limit.extent:define(getCapRadius)
@@ -649,7 +649,7 @@ end
 function PolyWallAttribute:hasWalls(depth)
 	depth = verifydepth(depth)
 	local function hasWalls(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			assert(not next(currentLayer.W))
 		else
 			for _, nextLayer in pairs(currentLayer) do
@@ -665,7 +665,7 @@ function PolyWallAttribute:template(depth, n, ...)
 	depth = verifydepth(depth)
 	n = type(n) == 'number' and math.floor(n) - 1 or errorf(2, 'Template', 'Argument #2 is not a number.')
 	local function template(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			currentLayer:xremove()
 			for i = 0, n do currentLayer:add(i, ...) end
 		else
@@ -692,7 +692,7 @@ function PolyWallAttribute:regularize(depth, shape, ofs)
 		table.insert(angles, cur)
 	end
 	local function regularize(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for i = 1, shape do
 				(currentLayer[i - 1] or errorf(depth + 3, 'Regularize', 'Layer <%d> does not exist. Did you forget to run the template function first?', i - 1)).angle:set(angles[i], angles[i + 1], ofs)
 			end
@@ -718,7 +718,7 @@ function PolyWallAttribute:distribute(depth, shape, ofs)
 		angles[i] = i * arc + ofs
 	end
 	local function distribute(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for i = 0, shape - 1 do
 				(currentLayer[i] or errorf(depth + 3, 'Distribute', 'Layer <%d> does not exist. Did you forget to run the template function first?', i)).angle.offset:set(angles[i])
 			end
@@ -750,7 +750,7 @@ function PolyWallAttribute:proportionalize(depth, ofs, ...)
 		table.insert(angles, mapValue(ref[i + 1], 0, ref[l + 1], 0, math.tau))
 	end
 	local function proportionalize(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for i = 1, l do
 				(currentLayer[i - 1] or errorf(depth + 3, 'Proportionalize', 'Layer <%d> does not exist. Did you forget to run the template function first?', i - 1)).angle:set(angles[i], angles[i + 1], ofs)
 			end
@@ -773,7 +773,7 @@ end
 function PolyWallAttribute:advance(depth, mFrameTime)
 	depth = verifydepth(depth)
 	local function advance(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local absth, outer, inner, dir = math.abs(wall.thickness:get()), wall.limit:order()
 				local pos = wall.position:get() - mFrameTime * wall.speed:get() * dir
@@ -801,7 +801,7 @@ end
 function PolyWallAttribute:step(depth, ...)
 	depth = verifydepth(depth)
 	local function step(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local angle0, angle1 = wall.angle:result()
 				local pos, th, outer, inner, dir = wall.position:get(), wall.thickness:get(), wall.limit:order()
@@ -857,7 +857,7 @@ end
 function PolyWallAttribute:move(depth, mFrameTime, ...)
 	depth = verifydepth(depth)
 	local function move(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local th = wall.thickness:get()
 				local absth, outer, inner, dir = math.abs(th), wall.limit:order()
@@ -893,7 +893,7 @@ end
 function PolyWallAttribute:fill(depth, ...)
 	depth = verifydepth(depth)
 	local function fill(currentLayer, layerDepth, ...)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local R0, G0, B0, A0 = wall.vertex[0]:result(...)
 				local R1, G1, B1, A1 = wall.vertex[1]:result(...)
@@ -913,7 +913,7 @@ end
 function PolyWallAttribute:run(depth, mFrameTime)
 	depth = verifydepth(depth)
 	local function run(currentLayer, layerDepth)
-		if layerDepth <= 0 then
+		if layerDepth == 0 then
 			for key, wall in pairs(currentLayer.W) do
 				local th = wall.thickness:get()
 				local absth, outer, inner, dir = math.abs(th), wall.limit:order()
@@ -956,40 +956,76 @@ end
 -- Layering within layers is unstable and will very likely change
 function PolyWallAttribute:sort(depth, descending)
 	depth = verifydepth(depth)
+
+	-- keys is a list of keys.
+	-- layers captures the structure of the layers.
 	local keys, layers = {}, {len = 0}
+
+	-- Gather keys and layer data.
 	local function map(currentLayer, layerDepth, currentBranch)
+		-- Gather all CW keys from the current layer. (For PWs and CWs.)
 		for key, _ in pairs(currentLayer.W) do
 			table.insert(keys, key.K)
 		end
 		for key, _ in pairs(currentLayer.P.W) do
 			table.insert(keys, key.K)
 		end
-		if layerDepth <= 0 then return end
+		
+		-- Exit condition.
+		if layerDepth == 0 then return end
+		
+		-- Gather layers.
+		-- nextLayer is a sublayer of the currentLayer.
 		for nextLayerId, nextLayer in pairs(currentLayer) do
+			-- Make a new branch in the layer table.
 			local nextBranch = {ix = nextLayerId, len = 0}
 			table.insert(currentBranch, nextBranch)
+
+			-- Increment the current branch length.
 			currentBranch.len = currentBranch.len + 1
+
+			-- Recusrive call with the next layer and branch.
 			map(nextLayer, layerDepth - 1, nextBranch)
 		end
 	end
 	map(self, depth, layers)
+
+	-- Sort all of the keys.
 	table.sort(keys, descending and function (a, b)
 		return a > b
 	end or nil)
+	
+	-- Keeps track of the CW key to be assigned next.
 	local keyIx = 1
+
+	-- Reassign CW keys.
 	local function link(currentLayer, layerDepth, currentBranch)
+		-- Assign MPs.
 		for key, _ in pairs(currentLayer.P.W) do
-			key.K = keys[keyIx]
+			local K = keys[keyIx]
+			key.K = K
+			cw_setCollision(K, false)
 			keyIx = keyIx + 1
 		end
+		
+		-- Assign PWs.
 		for key, _ in pairs(currentLayer.W) do
-			key.K = keys[keyIx]
+			local K = keys[keyIx]
+			key.K = K
+			cw_setCollision(K, key.C)
+			cw_setDeadly(K, key.D)
 			keyIx = keyIx + 1
 		end
-		if layerDepth <= 0 then return end
+
+		-- Exit condition.
+		if layerDepth == 0 then return end
+
+		-- Stort layer branches based on previously recorded layer IDs.
 		table.sort(currentBranch, function (a, b)
 			return a.ix < b.ix
 		end)
+
+		-- Loop through branches in order.
 		for i = 1, currentBranch.len do
 			link(currentLayer[currentBranch[i].ix], layerDepth - 1, currentBranch[i])
 		end
