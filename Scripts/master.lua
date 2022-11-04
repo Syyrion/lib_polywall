@@ -612,25 +612,27 @@ function PolyWallAttribute:dWall(depth, ...)
 	return dWall(self, depth, ...)
 end
 
-function PolyWallAttribute:pivotCap(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
+function PolyWallAttribute:pivotcap(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = verifydepth(depth)
-	local function pivotCap(currentLayer, layerDepth)
+	local function pivotcap(currentLayer, layerDepth)
 		if layerDepth == 0 then
 			local wall, key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			wall.thickness:define(getCapRadius)
 			return wall, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				pivotCap(nextLayer, layerDepth - 1)
+				pivotcap(nextLayer, layerDepth - 1)
 			end
 		end
 	end
-	return pivotCap(self, depth)
+	return pivotcap(self, depth)
 end
+-- ! Legacy function name
+PolyWallAttribute.pivotCap = PolyWallAttribute.pivotcap
 
-function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
+function PolyWallAttribute:pivotborder(depth, r, g, b, a, pol, cart, col, a0, a1, ofs)
 	depth = verifydepth(depth)
-	local function pivotBorder(currentLayer, layerDepth)
+	local function pivotborder(currentLayer, layerDepth)
 		if layerDepth == 0 then
 			local wall, key = currentLayer:nWall(0, nil, 0, 0, r, g, b, a, pol, cart, col, a0, a1, ofs, nil, 0)
 			wall.thickness:define(getPivotRadius)
@@ -638,27 +640,31 @@ function PolyWallAttribute:pivotBorder(depth, r, g, b, a, pol, cart, col, a0, a1
 			return wall, key
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				pivotBorder(nextLayer, layerDepth - 1)
+				pivotborder(nextLayer, layerDepth - 1)
 			end
 		end
 	end
-	return pivotBorder(self, depth)
+	return pivotborder(self, depth)
 end
+-- ! Legacy function name
+PolyWallAttribute.pivotBorder = PolyWallAttribute.pivotborder
 
 -- Returns true if any of the checked layers has a wall.
-function PolyWallAttribute:hasWalls(depth)
+function PolyWallAttribute:haswalls(depth)
 	depth = verifydepth(depth)
-	local function hasWalls(currentLayer, layerDepth)
+	local function haswalls(currentLayer, layerDepth)
 		if layerDepth == 0 then
 			assert(not next(currentLayer.W))
 		else
 			for _, nextLayer in pairs(currentLayer) do
-				hasWalls(nextLayer, layerDepth - 1)
+				haswalls(nextLayer, layerDepth - 1)
 			end
 		end
 	end
-	return not pcall(hasWalls, self, depth)
+	return not pcall(haswalls, self, depth)
 end
+-- ! Legacy function name
+PolyWallAttribute.hasWalls = PolyWallAttribute.haswalls
 
 -- Creates <n> layers ranging from [0, <n>)
 function PolyWallAttribute:template(depth, n, ...)
