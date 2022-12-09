@@ -750,7 +750,7 @@ function PolyWallAttribute:proportionalize(depth, ofs, ...)
         if type(t[i]) ~= 'number' then errorf(2, 'Proportionalize', 'Argument #%d is not a number.', i + 1) end
         ref[i + 1] = ref[i] + t[i]
     end
-    if ref[l + 1] <= 0 then errorf(2, 'Proportionalize', 'Ths sum of all values in the ratio must be greater than 0.') end
+    if ref[l + 1] <= 0 then errorf(2, 'Proportionalize', 'The sum of all values in the ratio must be greater than 0.') end
     local angles = {0}
     for i = 1, l do
         table.insert(angles, mapValue(ref[i + 1], 0, ref[l + 1], 0, math.tau))
