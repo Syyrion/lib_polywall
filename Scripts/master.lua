@@ -976,10 +976,10 @@ function PolyWallAttribute:sort(depth, descending)
         for key, _ in pairs(currentLayer.P.W) do
             table.insert(keys, key.K)
         end
-        
+
         -- Exit condition.
         if layerDepth == 0 then return end
-        
+
         -- Gather layers.
         -- nextLayer is a sublayer of the currentLayer.
         for nextLayerId, nextLayer in pairs(currentLayer) do
@@ -1000,7 +1000,7 @@ function PolyWallAttribute:sort(depth, descending)
     table.sort(keys, descending and function (a, b)
         return a > b
     end or nil)
-    
+
     -- Keeps track of the CW key to be assigned next.
     local keyIx = 1
 
@@ -1013,7 +1013,7 @@ function PolyWallAttribute:sort(depth, descending)
             cw_setCollision(K, false)
             keyIx = keyIx + 1
         end
-        
+
         -- Assign PWs.
         for key, _ in pairs(currentLayer.W) do
             local K = keys[keyIx]
@@ -1026,7 +1026,7 @@ function PolyWallAttribute:sort(depth, descending)
         -- Exit condition.
         if layerDepth == 0 then return end
 
-        -- Stort layer branches based on previously recorded layer IDs.
+        -- Sort layer branches based on previously recorded layer IDs.
         table.sort(currentBranch, function (a, b)
             return a.ix < b.ix
         end)
