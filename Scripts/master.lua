@@ -24,12 +24,12 @@
 u_execDependencyScript("library_extbase", "extbase", "syyrion", "utils.lua")
 
 --[[
-    -- # VERTEX CLASSES
+    -- ## VERTEX CLASSES
 ]]
 
 --[[
-    -- # Discrete Vertex Class
-    Handles a single vertex's col and transformations
+    -- ## Discrete Vertex Class
+    Handles a single vertex's color and transformations
 ]]
 
 local DiscreteVertex = {
@@ -55,7 +55,7 @@ function DiscreteVertex:result(...)
 end
 
 --[[
-    -- # Quad vertex class
+    -- ## Quad vertex class
     Handles 4 vertex classes at once
 ]]
 local QuadVertex = {
@@ -114,6 +114,11 @@ function QuadVertex:chfreeze()
         self[i].ch:freeze()
     end
 end
+function QuadVertex:chsoft_freeze()
+    for i = 0, 3 do
+        self[i].ch:soft_freeze()
+    end
+end
 function QuadVertex:chdefine(fn)
     for i = 0, 3 do
         self[i].ch:define(fn)
@@ -145,6 +150,11 @@ function QuadVertex:polfreeze()
         self[i].pol:freeze()
     end
 end
+function QuadVertex:polsoft_freeze()
+    for i = 0, 3 do
+        self[i].pol:soft_freeze()
+    end
+end
 function QuadVertex:poldefine(fn)
     for i = 0, 3 do
         self[i].pol:define(fn)
@@ -165,6 +175,11 @@ end
 function QuadVertex:cartfreeze()
     for i = 0, 3 do
         self[i].pol:freeze()
+    end
+end
+function QuadVertex:cartsoft_freeze()
+    for i = 0, 3 do
+        self[i].pol:soft_freeze()
     end
 end
 function QuadVertex:cartdefine(fn)
@@ -189,6 +204,11 @@ function QuadVertex:colfreeze()
         self[i].pol:freeze()
     end
 end
+function QuadVertex:colsoft_freeze()
+    for i = 0, 3 do
+        self[i].pol:soft_freeze()
+    end
+end
 function QuadVertex:coldefine(fn)
     for i = 0, 3 do
         self[i].pol:define(fn)
@@ -196,11 +216,11 @@ function QuadVertex:coldefine(fn)
 end
 
 --[[
-    -- # PARAMETER CLASSES
+    -- ## PARAMETER CLASSES
 ]]
 
 --[[
-    -- # Dual angle parameter class
+    -- ## Dual angle parameter class
     Handles two angles and an offset
 ]]
 local DualAngle = {
@@ -234,6 +254,11 @@ function DualAngle:freeze()
     self.extent:freeze()
     self.offset:freeze()
 end
+function DualAngle:soft_freeze()
+    self.origin:soft_freeze()
+    self.extent:soft_freeze()
+    self.offset:soft_freeze()
+end
 function DualAngle:define(a0fn, a1fn, ofsfn)
     self.origin:define(a0fn)
     self.extent:define(a1fn)
@@ -245,7 +270,7 @@ function DualAngle:result()
 end
 
 --[[
-    -- # Dual limit parameter class
+    -- ## Dual limit parameter class
     Handles origin and extent limits
 ]]
 local DualLimit = {
@@ -279,6 +304,10 @@ function DualLimit:freeze()
     self.origin:freeze()
     self.extent:freeze()
 end
+function DualLimit:soft_freeze()
+    self.origin:soft_freeze()
+    self.extent:soft_freeze()
+end
 function DualLimit:define(lim0fn, lim1fn)
     self.origin:define(lim0fn)
     self.extent:define(lim1fn)
@@ -298,7 +327,7 @@ function DualLimit:dir()
 end
 
 --[[
-    -- # LAYER CLASSES
+    -- ## LAYER CLASSES
 ]]
 
 local verifydepth = function(depth)
@@ -570,7 +599,7 @@ function MockPlayerAttribute:run(depth, mFocus)
 end
 
 --[[
-    -- # PolyWall Class
+    -- ## PolyWall Class
 ]]
 local PolyWallAttribute = setmetatable({
     thickness = Cascade.new(Filter.NUMBER, THICKNESS),
@@ -686,6 +715,57 @@ end
 PolyWallAttribute.rrmLayer = PolyWallAttribute.xremove
 PolyWallAttribute.rmLayer = PolyWallAttribute.remove
 
+FREEZE_ON_CREATION = {
+    thickness = false,
+    speed = false,
+    vertex = {
+        ch = false,
+        pol = false,
+        cart = false,
+        col = false,
+    },
+    angle = false,
+    limit = false,
+}
+
+function freezeAllWallParametersUponCreation()
+    FREEZE_ON_CREATION.thickness = true
+    FREEZE_ON_CREATION.speed = true
+    FREEZE_ON_CREATION.vertex.ch = true
+    FREEZE_ON_CREATION.vertex.pol = true
+    FREEZE_ON_CREATION.vertex.cart = true
+    FREEZE_ON_CREATION.vertex.col = true
+    FREEZE_ON_CREATION.angle = true
+    FREEZE_ON_CREATION.limit = true
+end
+
+local function freeze_parameters(wall)
+    if FREEZE_ON_CREATION.thickness then
+        wall.thickness:soft_freeze()
+    end
+    if FREEZE_ON_CREATION.speed then
+        wall.speed:soft_freeze()
+    end
+    if FREEZE_ON_CREATION.vertex.ch then
+        wall.vertex:chsoft_freeze()
+    end
+    if FREEZE_ON_CREATION.vertex.pol then
+        wall.vertex:polsoft_freeze()
+    end
+    if FREEZE_ON_CREATION.vertex.cart then
+        wall.vertex:cartsoft_freeze()
+    end
+    if FREEZE_ON_CREATION.vertex.col then
+        wall.vertex:colsoft_freeze()
+    end
+    if FREEZE_ON_CREATION.angle then
+        wall.angle:soft_freeze()
+    end
+    if FREEZE_ON_CREATION.limit then
+        wall.limit:soft_freeze()
+    end
+end
+
 -- Creates a wall of specified type
 -- Type can be 's', 'n' or 'd'
 -- Returns a tuple of all created wall key objects
@@ -706,6 +786,7 @@ function PolyWallAttribute:sWall(depth, ...)
     local function sWall(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
             local key, wall = { K = cw_create(), C = true, D = false }, currentLayer:construct(...)
+            freeze_parameters(wall)
             currentLayer.W[key] = wall
             return wall, key
         else
@@ -724,6 +805,7 @@ function PolyWallAttribute:nWall(depth, ...)
     local function nWall(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
             local key, wall = { K = cw_createNoCollision(), C = false, D = false }, currentLayer:construct(...)
+            freeze_parameters(wall)
             currentLayer.W[key] = wall
             return wall, key
         else
@@ -742,6 +824,7 @@ function PolyWallAttribute:dWall(depth, ...)
     local function dWall(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
             local key, wall = { K = cw_createDeadly(), C = true, D = true }, currentLayer:construct(...)
+            freeze_parameters(wall)
             currentLayer.W[key] = wall
             return wall, key
         else
