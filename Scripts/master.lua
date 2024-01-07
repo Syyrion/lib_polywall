@@ -697,7 +697,7 @@ function PolyWallAttribute:wall(depth, t, ...)
         depth,
         ...
     )
-endstea
+end
 
 -- Creates a standard wall
 -- Returns a tuple of all created wall key objects
