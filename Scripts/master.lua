@@ -21,7 +21,7 @@
     GitHub: https://github.com/Syyrion
 ]]
 
-u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
+u_execDependencyScript("library_extbase", "extbase", "syyrion", "utils.lua")
 
 --[[
     -- # VERTEX CLASSES
@@ -34,7 +34,7 @@ u_execDependencyScript('library_extbase', 'extbase', 'syyrion', 'utils.lua')
 
 local DiscreteVertex = {
     ch = Channel,
-    pol = Cascade.new(Filter.FUNCTION, __NOP)
+    pol = Cascade.new(Filter.FUNCTION, __NOP),
 }
 DiscreteVertex.cart = DiscreteVertex.pol
 DiscreteVertex.col = DiscreteVertex.pol
@@ -44,7 +44,7 @@ function DiscreteVertex:new(r, g, b, a, pol, cart, col)
         ch = self.ch:new(r, g, b, a),
         pol = self.pol:new(pol),
         cart = self.cart:new(cart),
-        col = self.col:new(col)
+        col = self.col:new(col),
     }, self)
     newInst.__index = newInst
     return newInst
@@ -62,7 +62,7 @@ local QuadVertex = {
     [0] = DiscreteVertex,
     [1] = DiscreteVertex,
     [2] = DiscreteVertex,
-    [3] = DiscreteVertex
+    [3] = DiscreteVertex,
 }
 QuadVertex.__index = QuadVertex
 function QuadVertex:new(r, g, b, a, pol, cart, col)
@@ -70,15 +70,31 @@ function QuadVertex:new(r, g, b, a, pol, cart, col)
         [0] = self[0]:new(r, g, b, a, pol, cart, col),
         [1] = self[1]:new(r, g, b, a, pol, cart, col),
         [2] = self[2]:new(r, g, b, a, pol, cart, col),
-        [3] = self[3]:new(r, g, b, a, pol, cart, col)
+        [3] = self[3]:new(r, g, b, a, pol, cart, col),
     }, self)
     newInst.__index = newInst
     return newInst
 end
-function QuadVertex:chsetcolor(r, g, b) for i = 0, 3 do self[i].ch:setcolor(r, g, b) end end
-function QuadVertex:chsetalpha(a) for i = 0, 3 do self[i].ch:setalpha(a) end end
-function QuadVertex:chset(r, g, b, a) for i = 0, 3 do self[i].ch:set(r, g, b, a) end end
-function QuadVertex:chsethsv(h, s, v) for i = 0, 3 do self[i].ch:sethsv(h, s, v) end end
+function QuadVertex:chsetcolor(r, g, b)
+    for i = 0, 3 do
+        self[i].ch:setcolor(r, g, b)
+    end
+end
+function QuadVertex:chsetalpha(a)
+    for i = 0, 3 do
+        self[i].ch:setalpha(a)
+    end
+end
+function QuadVertex:chset(r, g, b, a)
+    for i = 0, 3 do
+        self[i].ch:set(r, g, b, a)
+    end
+end
+function QuadVertex:chsethsv(h, s, v)
+    for i = 0, 3 do
+        self[i].ch:sethsv(h, s, v)
+    end
+end
 function QuadVertex:chget()
     local r0, g0, b0, a0 = self[0].ch:get()
     local r1, g1, b1, a1 = self[1].ch:get()
@@ -93,8 +109,16 @@ function QuadVertex:chrawget()
     local r3, g3, b3, a3 = self[3].ch:rawget()
     return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, r3, g3, b3, a3
 end
-function QuadVertex:chfreeze() for i = 0, 3 do self[i].ch:freeze() end end
-function QuadVertex:chdefine(fn) for i = 0, 3 do self[i].ch:define(fn) end end
+function QuadVertex:chfreeze()
+    for i = 0, 3 do
+        self[i].ch:freeze()
+    end
+end
+function QuadVertex:chdefine(fn)
+    for i = 0, 3 do
+        self[i].ch:define(fn)
+    end
+end
 
 -- ! Depreciated
 function QuadVertex:chresult(...)
@@ -105,23 +129,71 @@ function QuadVertex:chresult(...)
     return r0, g0, b0, a0, r1, g1, b1, a1, r2, g2, b2, a2, r3, g3, b3, a3
 end
 
-function QuadVertex:polset(pol) for i = 0, 3 do self[i].pol:set(pol) end end
-function QuadVertex:polget() return self[0].pol:get(), self[1].pol:get(), self[2].pol:get(), self[3].pol:get() end
-function QuadVertex:polrawget() return self[0].pol:rawget(), self[1].pol:rawget(), self[2].pol:rawget(), self[3].pol:rawget() end
-function QuadVertex:polfreeze() for i = 0, 3 do self[i].pol:freeze() end end
-function QuadVertex:poldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
+function QuadVertex:polset(pol)
+    for i = 0, 3 do
+        self[i].pol:set(pol)
+    end
+end
+function QuadVertex:polget()
+    return self[0].pol:get(), self[1].pol:get(), self[2].pol:get(), self[3].pol:get()
+end
+function QuadVertex:polrawget()
+    return self[0].pol:rawget(), self[1].pol:rawget(), self[2].pol:rawget(), self[3].pol:rawget()
+end
+function QuadVertex:polfreeze()
+    for i = 0, 3 do
+        self[i].pol:freeze()
+    end
+end
+function QuadVertex:poldefine(fn)
+    for i = 0, 3 do
+        self[i].pol:define(fn)
+    end
+end
 
-function QuadVertex:cartset(cart) for i = 0, 3 do self[i].cart:set(cart) end end
-function QuadVertex:cartget() return self[0].cart:get(), self[1].cart:get(), self[2].cart:get(), self[3].cart:get() end
-function QuadVertex:cartrawget() return self[0].cart:rawget(), self[1].cart:rawget(), self[2].cart:rawget(), self[3].cart:rawget() end
-function QuadVertex:cartfreeze() for i = 0, 3 do self[i].pol:freeze() end end
-function QuadVertex:cartdefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
+function QuadVertex:cartset(cart)
+    for i = 0, 3 do
+        self[i].cart:set(cart)
+    end
+end
+function QuadVertex:cartget()
+    return self[0].cart:get(), self[1].cart:get(), self[2].cart:get(), self[3].cart:get()
+end
+function QuadVertex:cartrawget()
+    return self[0].cart:rawget(), self[1].cart:rawget(), self[2].cart:rawget(), self[3].cart:rawget()
+end
+function QuadVertex:cartfreeze()
+    for i = 0, 3 do
+        self[i].pol:freeze()
+    end
+end
+function QuadVertex:cartdefine(fn)
+    for i = 0, 3 do
+        self[i].pol:define(fn)
+    end
+end
 
-function QuadVertex:colset(col) for i = 0, 3 do self[i].col:set(col) end end
-function QuadVertex:colget() return self[0].col:get(), self[1].col:get(), self[2].col:get(), self[3].col:get() end
-function QuadVertex:colrawget() return self[0].col:rawget(), self[1].col:rawget(), self[2].col:rawget(), self[3].col:rawget() end
-function QuadVertex:colfreeze() for i = 0, 3 do self[i].pol:freeze() end end
-function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
+function QuadVertex:colset(col)
+    for i = 0, 3 do
+        self[i].col:set(col)
+    end
+end
+function QuadVertex:colget()
+    return self[0].col:get(), self[1].col:get(), self[2].col:get(), self[3].col:get()
+end
+function QuadVertex:colrawget()
+    return self[0].col:rawget(), self[1].col:rawget(), self[2].col:rawget(), self[3].col:rawget()
+end
+function QuadVertex:colfreeze()
+    for i = 0, 3 do
+        self[i].pol:freeze()
+    end
+end
+function QuadVertex:coldefine(fn)
+    for i = 0, 3 do
+        self[i].pol:define(fn)
+    end
+end
 
 --[[
     -- # PARAMETER CLASSES
@@ -132,7 +204,7 @@ function QuadVertex:coldefine(fn) for i = 0, 3 do self[i].pol:define(fn) end end
     Handles two angles and an offset
 ]]
 local DualAngle = {
-    origin = Cascade.new(Filter.NUMBER, 0)
+    origin = Cascade.new(Filter.NUMBER, 0),
 }
 DualAngle.extent = DualAngle.origin
 DualAngle.offset = DualAngle.origin
@@ -141,16 +213,32 @@ function DualAngle:new(a0, a1, ofs)
     local newInst = setmetatable({
         origin = self.origin:new(a0),
         extent = self.extent:new(a1),
-        offset = self.offset:new(ofs)
+        offset = self.offset:new(ofs),
     }, self)
     newInst.__index = newInst
     return newInst
 end
-function DualAngle:set(a0, a1, ofs) self.origin:set(a0) self.extent:set(a1) self.offset:set(ofs) end
-function DualAngle:get() return self.origin:get(), self.extent:get(), self.offset:get() end
-function DualAngle:rawget() return self.origin:rawget(), self.extent:rawget(), self.offset:rawget() end
-function DualAngle:freeze() self.origin:freeze() self.extent:freeze() self.offset:freeze() end
-function DualAngle:define(a0fn, a1fn, ofsfn) self.origin:define(a0fn) self.extent:define(a1fn) self.offset:define(ofsfn) end
+function DualAngle:set(a0, a1, ofs)
+    self.origin:set(a0)
+    self.extent:set(a1)
+    self.offset:set(ofs)
+end
+function DualAngle:get()
+    return self.origin:get(), self.extent:get(), self.offset:get()
+end
+function DualAngle:rawget()
+    return self.origin:rawget(), self.extent:rawget(), self.offset:rawget()
+end
+function DualAngle:freeze()
+    self.origin:freeze()
+    self.extent:freeze()
+    self.offset:freeze()
+end
+function DualAngle:define(a0fn, a1fn, ofsfn)
+    self.origin:define(a0fn)
+    self.extent:define(a1fn)
+    self.offset:define(ofsfn)
+end
 function DualAngle:result()
     local ofs = self.offset:get()
     return self.origin:get() + ofs, self.extent:get() + ofs
@@ -161,39 +249,60 @@ end
     Handles origin and extent limits
 ]]
 local DualLimit = {
-    origin = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or l_getWallSpawnDistance() end),
-    extent = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or getPivotRadius() end)
+    origin = Cascade.new(Filter.NUMBER, nil, function(self)
+        return self.val or l_getWallSpawnDistance()
+    end),
+    extent = Cascade.new(Filter.NUMBER, nil, function(self)
+        return self.val or getPivotRadius()
+    end),
 }
 DualLimit.__index = DualLimit
 function DualLimit:new(lim0, lim1)
     local newInst = setmetatable({
         origin = self.origin:new(lim0),
-        extent = self.extent:new(lim1)
+        extent = self.extent:new(lim1),
     }, self)
     newInst.__index = newInst
     return newInst
 end
-function DualLimit:set(lim0, lim1) self.origin:set(lim0) self.extent:set(lim1) end
-function DualLimit:get() return self.origin:get(), self.extent:get() end
-function DualLimit:rawget() return self.origin:rawget(), self.extent:rawget() end
-function DualLimit:freeze() self.origin:freeze() self.extent:freeze() end
-function DualLimit:define(lim0fn, lim1fn) self.origin:define(lim0fn) self.extent:define(lim1fn) end
-function DualLimit:swap() self.origin, self.extent = self.extent, self.origin end
+function DualLimit:set(lim0, lim1)
+    self.origin:set(lim0)
+    self.extent:set(lim1)
+end
+function DualLimit:get()
+    return self.origin:get(), self.extent:get()
+end
+function DualLimit:rawget()
+    return self.origin:rawget(), self.extent:rawget()
+end
+function DualLimit:freeze()
+    self.origin:freeze()
+    self.extent:freeze()
+end
+function DualLimit:define(lim0fn, lim1fn)
+    self.origin:define(lim0fn)
+    self.extent:define(lim1fn)
+end
+function DualLimit:swap()
+    self.origin, self.extent = self.extent, self.origin
+end
 function DualLimit:order()
     local origin, extent = self.origin:get(), self.extent:get()
-    if origin >= extent then return origin, extent, 1 end
+    if origin >= extent then
+        return origin, extent, 1
+    end
     return extent, origin, -1
 end
-function DualLimit:dir() return self.origin:get() >= self.extent:get() and 1 or -1 end
-
-
+function DualLimit:dir()
+    return self.origin:get() >= self.extent:get() and 1 or -1
+end
 
 --[[
     -- # LAYER CLASSES
 ]]
 
-local verifydepth = function (depth)
-    return type(depth) == 'number' and math.floor(depth) or 0
+local verifydepth = function(depth)
+    return type(depth) == "number" and math.floor(depth) or 0
 end
 
 --[[
@@ -204,9 +313,15 @@ Generic.__index = Generic
 
 -- Removes a wall with key <key>
 function Generic:wremove(key)
-    if type(key) ~= 'table' then errorf(2, 'WallRemoval', 'Argument #1 is not a table.') end
-    if type(key.K) ~= 'number' then errorf(2, 'WallRemoval', 'Invalid or missing custom wall key.') end
-    if not self.W[key] then errorf(2, 'WallRemoval', 'Custom wall <%d> does not exist.', key.K) end
+    if type(key) ~= "table" then
+        errorf(2, "WallRemoval", "Argument #1 is not a table.")
+    end
+    if type(key.K) ~= "number" then
+        errorf(2, "WallRemoval", "Invalid or missing custom wall key.")
+    end
+    if not self.W[key] then
+        errorf(2, "WallRemoval", "Custom wall <%d> does not exist.", key.K)
+    end
     cw_setVertexPos4(key.K, 0, 0, 0, 0, 0, 0, 0, 0)
     cw_destroy(key.K)
     self.W[key] = nil
@@ -262,11 +377,19 @@ end
     -- # MockPlayer class
 ]]
 local MockPlayerAttribute = setmetatable({
-    angle = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or u_getPlayerAngle() end),
+    angle = Cascade.new(Filter.NUMBER, nil, function(self)
+        return self.val or u_getPlayerAngle()
+    end),
     offset = DualAngle.origin,
-    distance = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or getDistanceBetweenCenterAndPlayerTip() end),
-    height = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or getPlayerHeight() end),
-    width = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or getPlayerBaseWidth() end)
+    distance = Cascade.new(Filter.NUMBER, nil, function(self)
+        return self.val or getDistanceBetweenCenterAndPlayerTip()
+    end),
+    height = Cascade.new(Filter.NUMBER, nil, function(self)
+        return self.val or getPlayerHeight()
+    end),
+    width = Cascade.new(Filter.NUMBER, nil, function(self)
+        return self.val or getPlayerBaseWidth()
+    end),
 }, Generic)
 MockPlayerAttribute.__index = MockPlayerAttribute
 
@@ -280,7 +403,7 @@ function MockPlayerAttribute:construct(parent, a0, ofs, d, h, w, r, g, b, a, pol
         distance = self.distance:new(d),
         height = self.height:new(h),
         width = self.width:new(w),
-        vertex = parent.vertex:new(r, g, b, a, pol, cart, col)
+        vertex = parent.vertex:new(r, g, b, a, pol, cart, col),
     }
 end
 
@@ -299,7 +422,7 @@ function MockPlayerAttribute:create(depth, ...)
     depth = verifydepth(depth)
     local function create(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
-            local key, mp = {K = cw_createNoCollision()}, currentLayer:construct(currentLayer, ...)
+            local key, mp = { K = cw_createNoCollision() }, currentLayer:construct(currentLayer, ...)
             currentLayer.W[key] = mp
             return mp, key
         else
@@ -317,7 +440,8 @@ end
 
 function enableAccurateMockPlayers()
     function getSideRadiusAndAngle(halfWidth, baseRadius)
-        return (halfWidth * halfWidth + baseRadius * baseRadius) ^ 0.5, math.atan2(halfWidth, baseRadius) + (baseRadius < 0 and math.pi or 0)
+        return (halfWidth * halfWidth + baseRadius * baseRadius) ^ 0.5,
+            math.atan2(halfWidth, baseRadius) + (baseRadius < 0 and math.pi or 0)
     end
 end
 
@@ -330,7 +454,10 @@ function MockPlayerAttribute:step(depth, mFocus, ...)
     local function step(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
             for key, wall in pairs(currentLayer.W) do
-                local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
+                local angle, distance, halfWidth =
+                    wall.angle:get() + wall.offset:get(),
+                    wall.distance:get(),
+                    wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
                 local baseRadius = distance - wall.height:get()
                 local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
 
@@ -361,15 +488,16 @@ end
 
 --#endregion
 
-
-
 -- ! Passing arguments to transformations via movement functions is no longer supported.
 function MockPlayerAttribute:move(depth, mFocus, ...)
     depth = verifydepth(depth)
     local function move(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
             for key, wall in pairs(currentLayer.W) do
-                local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
+                local angle, distance, halfWidth =
+                    wall.angle:get() + wall.offset:get(),
+                    wall.distance:get(),
+                    wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
                 local baseRadius = distance - wall.height:get()
                 local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
                 local r0, a0 = wall.vertex[0].pol:get()(distance, angle, ...)
@@ -414,7 +542,10 @@ function MockPlayerAttribute:run(depth, mFocus)
     local function run(currentLayer, layerDepth)
         if layerDepth == 0 then
             for key, wall in pairs(currentLayer.W) do
-                local angle, distance, halfWidth = wall.angle:get() + wall.offset:get(), wall.distance:get(), wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
+                local angle, distance, halfWidth =
+                    wall.angle:get() + wall.offset:get(),
+                    wall.distance:get(),
+                    wall.width:get() * 0.5 * (mFocus and FOCUS_RATIO or 1)
                 local baseRadius = distance - wall.height:get()
                 local sideRadius, sideAngle = getSideRadiusAndAngle(halfWidth, baseRadius)
                 local r0, a0 = wall.vertex[0].pol:get()(distance, angle)
@@ -443,11 +574,13 @@ end
 ]]
 local PolyWallAttribute = setmetatable({
     thickness = Cascade.new(Filter.NUMBER, THICKNESS),
-    speed = Cascade.new(Filter.NUMBER, nil, function (self) return self.val or getWallSpeedInUnitsPerFrame() end),
+    speed = Cascade.new(Filter.NUMBER, nil, function(self)
+        return self.val or getWallSpeedInUnitsPerFrame()
+    end),
     vertex = QuadVertex,
     angle = DualAngle,
     limit = DualLimit,
-    P = MockPlayer
+    P = MockPlayer,
 }, Generic)
 PolyWallAttribute.__index = PolyWallAttribute
 
@@ -460,7 +593,7 @@ function PolyWallAttribute:construct(th, sp, p, r, g, b, a, pol, cart, col, a0, 
         speed = self.speed:new(sp),
         vertex = self.vertex:new(r, g, b, a, pol, cart, col),
         angle = self.angle:new(a0, a1, ofs),
-        limit = self.limit:new(lim0, lim1)
+        limit = self.limit:new(lim0, lim1),
     }
     newInst.position = newInst.limit.origin:new(p)
     return newInst
@@ -478,8 +611,10 @@ end
 
 -- Creates a new layer with positive integer key <n>.
 function PolyWallAttribute:add(n, ...)
-    n = type(n) == 'number' and math.floor(n) or errorf(2, 'LayerCreation', 'Argument #1 is not a number.')
-    if self[n] then errorf(2, 'LayerCreation', 'Cannot overwrite already existing layer <%d>', n) end
+    n = type(n) == "number" and math.floor(n) or errorf(2, "LayerCreation", "Argument #1 is not a number.")
+    if self[n] then
+        errorf(2, "LayerCreation", "Cannot overwrite already existing layer <%d>", n)
+    end
     local newLayer = self:new(...)
     self[n] = newLayer
     self.P[n] = newLayer.P
@@ -505,8 +640,10 @@ end
 
 -- Removes a layer with integer key <n>.
 function PolyWallAttribute:remove(n)
-    n = type(n) == 'number' and math.floor(n) or errorf(2, 'LayerRemoval', 'Argument #1 is not a number.')
-    if not self[n] then return end
+    n = type(n) == "number" and math.floor(n) or errorf(2, "LayerRemoval", "Argument #1 is not a number.")
+    if not self[n] then
+        return
+    end
     self[n].P:wxremove()
     self[n]:wxremove()
     self[n]:xremove()
@@ -549,14 +686,18 @@ end
 PolyWallAttribute.rrmLayer = PolyWallAttribute.xremove
 PolyWallAttribute.rmLayer = PolyWallAttribute.remove
 
-
 -- Creates a wall of specified type
 -- Type can be 's', 'n' or 'd'
 -- Returns a tuple of all created wall key objects
 function PolyWallAttribute:wall(depth, t, ...)
-    if type(t) ~= 'string' then errorf(2, 'WallCreation', 'Argument #2 is not a string.') end
-    return (self[t .. 'Wall'] or errorf(2, 'WallCreation', 'Argument #2 is not equivalent to "s", "n", or "d".'))(depth, ...)
-end
+    if type(t) ~= "string" then
+        errorf(2, "WallCreation", "Argument #2 is not a string.")
+    end
+    return (self[t .. "Wall"] or errorf(2, "WallCreation", 'Argument #2 is not equivalent to "s", "n", or "d".'))(
+        depth,
+        ...
+    )
+endstea
 
 -- Creates a standard wall
 -- Returns a tuple of all created wall key objects
@@ -564,7 +705,7 @@ function PolyWallAttribute:sWall(depth, ...)
     depth = verifydepth(depth)
     local function sWall(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
-            local key, wall = {K = cw_create(), C = true, D = false}, currentLayer:construct(...)
+            local key, wall = { K = cw_create(), C = true, D = false }, currentLayer:construct(...)
             currentLayer.W[key] = wall
             return wall, key
         else
@@ -582,7 +723,7 @@ function PolyWallAttribute:nWall(depth, ...)
     depth = verifydepth(depth)
     local function nWall(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
-            local key, wall = {K = cw_createNoCollision(), C = false, D = false}, currentLayer:construct(...)
+            local key, wall = { K = cw_createNoCollision(), C = false, D = false }, currentLayer:construct(...)
             currentLayer.W[key] = wall
             return wall, key
         else
@@ -600,7 +741,7 @@ function PolyWallAttribute:dWall(depth, ...)
     depth = verifydepth(depth)
     local function dWall(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
-            local key, wall = {K = cw_createDeadly(), C = true, D = true}, currentLayer:construct(...)
+            local key, wall = { K = cw_createDeadly(), C = true, D = true }, currentLayer:construct(...)
             currentLayer.W[key] = wall
             return wall, key
         else
@@ -669,11 +810,13 @@ PolyWallAttribute.hasWalls = PolyWallAttribute.haswalls
 -- Creates <n> layers ranging from [0, <n>)
 function PolyWallAttribute:template(depth, n, ...)
     depth = verifydepth(depth)
-    n = type(n) == 'number' and math.floor(n) - 1 or errorf(2, 'Template', 'Argument #2 is not a number.')
+    n = type(n) == "number" and math.floor(n) - 1 or errorf(2, "Template", "Argument #2 is not a number.")
     local function template(currentLayer, layerDepth, ...)
         if layerDepth == 0 then
             currentLayer:xremove()
-            for i = 0, n do currentLayer:add(i, ...) end
+            for i = 0, n do
+                currentLayer:add(i, ...)
+            end
         else
             for _, nextLayer in pairs(currentLayer) do
                 template(nextLayer, depth - 1, ...)
@@ -688,11 +831,11 @@ end
 -- All layers to be affected must exist
 function PolyWallAttribute:regularize(depth, shape, ofs)
     depth = verifydepth(depth)
-    shape = Filter.SIDE_COUNT(shape) and shape or errorf(2, 'Regularize', 'Invalid side count.')
-    ofs = type(ofs) == 'number' and ofs or 0
+    shape = Filter.SIDE_COUNT(shape) and shape or errorf(2, "Regularize", "Invalid side count.")
+    ofs = type(ofs) == "number" and ofs or 0
     local arc = math.tau / shape
     local cur = arc * -0.5
-    local angles = {cur}
+    local angles = { cur }
     for _ = 1, shape do
         cur = cur + arc
         table.insert(angles, cur)
@@ -700,7 +843,12 @@ function PolyWallAttribute:regularize(depth, shape, ofs)
     local function regularize(currentLayer, layerDepth)
         if layerDepth == 0 then
             for i = 1, shape do
-                (currentLayer[i - 1] or errorf(depth + 3, 'Regularize', 'Layer <%d> does not exist. Did you forget to run the template function first?', i - 1)).angle:set(angles[i], angles[i + 1], ofs)
+                (currentLayer[i - 1] or errorf(
+                    depth + 3,
+                    "Regularize",
+                    "Layer <%d> does not exist. Did you forget to run the template function first?",
+                    i - 1
+                )).angle:set(angles[i], angles[i + 1], ofs)
             end
         else
             for _, nextLayer in pairs(currentLayer) do
@@ -716,17 +864,22 @@ end
 -- All layers effected must exist
 function PolyWallAttribute:distribute(depth, shape, ofs)
     depth = verifydepth(depth)
-    shape = Filter.SIDE_COUNT(shape) and shape or errorf(2, 'Distribute', 'Invalid side count.')
-    ofs = type(ofs) == 'number' and ofs or 0
+    shape = Filter.SIDE_COUNT(shape) and shape or errorf(2, "Distribute", "Invalid side count.")
+    ofs = type(ofs) == "number" and ofs or 0
     local arc = math.tau / shape
-    local angles = {[0] = ofs}
+    local angles = { [0] = ofs }
     for i = 1, shape - 1 do
         angles[i] = i * arc + ofs
     end
     local function distribute(currentLayer, layerDepth)
         if layerDepth == 0 then
             for i = 0, shape - 1 do
-                (currentLayer[i] or errorf(depth + 3, 'Distribute', 'Layer <%d> does not exist. Did you forget to run the template function first?', i)).angle.offset:set(angles[i])
+                (currentLayer[i] or errorf(
+                    depth + 3,
+                    "Distribute",
+                    "Layer <%d> does not exist. Did you forget to run the template function first?",
+                    i
+                )).angle.offset:set(angles[i])
             end
         else
             for _, nextLayer in pairs(currentLayer) do
@@ -743,22 +896,31 @@ end
 -- Returns the largest index of the new layers
 function PolyWallAttribute:proportionalize(depth, ofs, ...)
     depth = verifydepth(depth)
-    ofs = type(ofs) == 'number' and ofs or 0
-    local t, ref = {...}, {0}
+    ofs = type(ofs) == "number" and ofs or 0
+    local t, ref = { ... }, { 0 }
     local l = #t
     for i = 1, l do
-        if type(t[i]) ~= 'number' then errorf(2, 'Proportionalize', 'Argument #%d is not a number.', i + 1) end
+        if type(t[i]) ~= "number" then
+            errorf(2, "Proportionalize", "Argument #%d is not a number.", i + 1)
+        end
         ref[i + 1] = ref[i] + t[i]
     end
-    if ref[l + 1] <= 0 then errorf(2, 'Proportionalize', 'The sum of all values in the ratio must be greater than 0.') end
-    local angles = {0}
+    if ref[l + 1] <= 0 then
+        errorf(2, "Proportionalize", "The sum of all values in the ratio must be greater than 0.")
+    end
+    local angles = { 0 }
     for i = 1, l do
         table.insert(angles, mapValue(ref[i + 1], 0, ref[l + 1], 0, math.tau))
     end
     local function proportionalize(currentLayer, layerDepth)
         if layerDepth == 0 then
             for i = 1, l do
-                (currentLayer[i - 1] or errorf(depth + 3, 'Proportionalize', 'Layer <%d> does not exist. Did you forget to run the template function first?', i - 1)).angle:set(angles[i], angles[i + 1], ofs)
+                (currentLayer[i - 1] or errorf(
+                    depth + 3,
+                    "Proportionalize",
+                    "Layer <%d> does not exist. Did you forget to run the template function first?",
+                    i - 1
+                )).angle:set(angles[i], angles[i + 1], ofs)
             end
         else
             for _, nextLayer in pairs(currentLayer) do
@@ -855,8 +1017,6 @@ function PolyWallAttribute:draw(depth, mFrameTime, r, g, b, a, ...)
 end
 
 --#endregion
-
-
 
 -- ! Passing arguments to transformations via movement functions is no longer supported.
 -- Union of advance and step.
@@ -965,7 +1125,7 @@ function PolyWallAttribute:sort(depth, descending)
 
     -- keys is a list of keys.
     -- layers captures the structure of the layers.
-    local keys, layers = {}, {len = 0}
+    local keys, layers = {}, { len = 0 }
 
     -- Gather keys and layer data.
     local function map(currentLayer, layerDepth, currentBranch)
@@ -978,13 +1138,15 @@ function PolyWallAttribute:sort(depth, descending)
         end
 
         -- Exit condition.
-        if layerDepth == 0 then return end
+        if layerDepth == 0 then
+            return
+        end
 
         -- Gather layers.
         -- nextLayer is a sublayer of the currentLayer.
         for nextLayerId, nextLayer in pairs(currentLayer) do
             -- Make a new branch in the layer table.
-            local nextBranch = {ix = nextLayerId, len = 0}
+            local nextBranch = { ix = nextLayerId, len = 0 }
             table.insert(currentBranch, nextBranch)
 
             -- Increment the current branch length.
@@ -997,7 +1159,7 @@ function PolyWallAttribute:sort(depth, descending)
     map(self, depth, layers)
 
     -- Sort all of the keys.
-    table.sort(keys, descending and function (a, b)
+    table.sort(keys, descending and function(a, b)
         return a > b
     end or nil)
 
@@ -1024,10 +1186,12 @@ function PolyWallAttribute:sort(depth, descending)
         end
 
         -- Exit condition.
-        if layerDepth == 0 then return end
+        if layerDepth == 0 then
+            return
+        end
 
         -- Sort layer branches based on previously recorded layer IDs.
-        table.sort(currentBranch, function (a, b)
+        table.sort(currentBranch, function(a, b)
             return a.ix < b.ix
         end)
 
